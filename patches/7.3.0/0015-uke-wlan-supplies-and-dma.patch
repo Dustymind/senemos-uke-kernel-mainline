@@ -6,6 +6,7 @@ then admit OEM smpb1/smpb3 and the exact WLAN SMR ID/mask. Require all
 three Uke RF supplies before DSP boot; unwind failed starts and release
 votes after shutdown. Other ath11k AHB boards stay unchanged.
 
+diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c b/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c
 --- a/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c
 +++ b/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c
 @@ -815,7 +815,7 @@
@@ -34,6 +35,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  				return dev_err_probe(dev, -EOPNOTSUPP,
  						     "boot stream needs an ACTLR override\n");
  	}
+diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qcom-rpmh-regulator-uke.c
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
 @@ -1991,13 +1991,20 @@
@@ -61,6 +63,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  		return -ENODEV;
  
  	aggr_vreg->addr = cmd_db_read_addr(aggr_vreg->resource_name);
+diff --git a/drivers/net/wireless/ath/ath11k/ahb.c b/drivers/net/wireless/ath/ath11k/ahb.c
 --- a/drivers/net/wireless/ath/ath11k/ahb.c
 +++ b/drivers/net/wireless/ath/ath11k/ahb.c
 @@ -401,14 +401,60 @@
@@ -134,7 +137,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  
  static void ath11k_ahb_init_qmi_ce_config(struct ath11k_base *ab)
 @@ -1150,6 +1197,10 @@
- 	ab->fw_mode = ATH11K_FIRMWARE_MODE_NORMAL;
+ 	ab->fw_mode = ATH11K_FIRMWARE_MODE_NORMAL
  	platform_set_drvdata(pdev, ab);
  
 +	ret = ath11k_ahb_uke_regulators(ab);
@@ -144,6 +147,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  	ret = ath11k_pcic_register_pci_ops(ab, pci_ops);
  	if (ret) {
  		ath11k_err(ab, "failed to register PCI ops: %d\n", ret);
+diff --git a/drivers/net/wireless/ath/ath11k/ahb.h b/drivers/net/wireless/ath/ath11k/ahb.h
 --- a/drivers/net/wireless/ath/ath11k/ahb.h
 +++ b/drivers/net/wireless/ath/ath11k/ahb.h
 @@ -7,6 +7,7 @@
