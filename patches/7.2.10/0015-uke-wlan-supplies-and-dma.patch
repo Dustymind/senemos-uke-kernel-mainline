@@ -41,7 +41,7 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  	}
  
 -	/* Limit this data-only experiment to the six required supply resources. */
-+	/* OEM Uke supplies required by CPU, USB, UFS and WCN6750. */
++	/* OEM Uke supplies required by CPU, USB, UFS, WCN6750 and Focus Keyboard. */
  	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "ldob2") &&
@@ -49,6 +49,8 @@ votes after shutdown. Other ath11k AHB boards stay unchanged.
  	    strcmp(aggr_vreg->resource_name, "ldob7") &&
 -	    strcmp(aggr_vreg->resource_name, "ldob17"))
 +	    strcmp(aggr_vreg->resource_name, "ldob17") &&
++	    strcmp(aggr_vreg->resource_name, "ldob22") &&
++	    strcmp(aggr_vreg->resource_name, "ldob23") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb2") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb1") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb3") &&
