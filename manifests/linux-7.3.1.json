@@ -66,10 +66,6 @@
             "sha256": "99f958bd34a7c4def62323e58bb6e30d12be82097f3447b7f034c0b6d5e21742"
         },
         {
-            "path": "patches/7.3.0/0016-uke-wlan-ordered-rails.patch",
-            "sha256": "40c611b9e280c46b31f7bc4cf2d3fd9f9edeb035f35f4c3d8cb7cc0d808a2b7c"
-        },
-        {
             "path": "patches/7.3.0/0017-cliffs-gpio-function-flag.patch",
             "sha256": "7b87ac3a643c166f768485128b8b1e693a8fc4d6d91fba931493c6c33ebca514"
         },
