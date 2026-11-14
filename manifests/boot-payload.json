@@ -29,11 +29,11 @@
     },
     {
       "path": "packaging/native/native.config",
-      "sha256": "cfdd93a74b415482233e8ded4b31f050b28b715b31656c5841f8b61e15e9cae4"
+      "sha256": "5e366b3fdf5c92e9ee8e9613e117e3cab1e8c5fd3dc9d044aa37683b72af6598"
     },
     {
       "path": "packaging/native/prepare.sh",
-      "sha256": "c21af686520987f652bec8a3c1e8c63f4bf9f3f794ed8575483f071ce4deac32"
+      "sha256": "0e3f5ce9101a28b0ec0e9d3ee9472185cdb96daaa7b79ea1dc1ba0c7a16f2b08"
     },
     {
       "path": "patches/boot/0005-uke-root-selector.patch",
@@ -553,7 +553,7 @@
     },
     {
       "path": "src/display/sm7675-uke-native-display-oem-modes.dtso",
-      "sha256": "a9e7e1c226346ecb3c14c4bf3883fb4ca2de7427f0a474710d0e488e2b323005"
+      "sha256": "821cabda157872e700a026e61aa46f0d818f673b9852c360973a44f96dc397e1"
     },
     {
       "path": "src/display/uke-abl-native.h",
