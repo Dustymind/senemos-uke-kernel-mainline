@@ -1041,7 +1041,7 @@
     },
     {
       "path": "tests/wlan-power-contract.sh",
-      "sha256": "96bb052e278f5696baceecc220c03e7ddf2c730074f16babd79a490d7121c5ee"
+      "sha256": "c2dbfe20a8926b3653cc76c46597c67742e71fa7f0afb42f97d8adaf69baa08d"
     },
     {
       "path": "tests/wpss-proxy-contract.sh",
