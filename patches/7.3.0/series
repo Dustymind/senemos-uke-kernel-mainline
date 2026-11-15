@@ -18,7 +18,6 @@
 0020-cliffs-adsp-pas.patch
 0021-cliffs-gpu-clock-handoff.patch
 0022-ktz8866-write-errors.patch
-0024-uke-adsp-gpu-arc-suppliers.patch
 0025-uke-paired-normal-backlight.patch
 0026-cliffs-lpass-adsp-interconnect.patch
 0027-uke-oem-gpr-domain.patch
