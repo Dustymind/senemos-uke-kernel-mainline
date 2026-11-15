@@ -737,7 +737,7 @@
     },
     {
       "path": "tests/kernel-hardening-config-contract.sh",
-      "sha256": "53c85b94f1ad581f5dfa4d881c100db6a52559dcb77da8594341401592b6810b"
+      "sha256": "9f2c04c8df5fcf77501bf175473c76940b3207a9b64d0a20287b71fce4c18a6b"
     },
     {
       "path": "tests/l3-provider-contract.sh",

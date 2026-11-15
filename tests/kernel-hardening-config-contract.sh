@@ -10,9 +10,8 @@ for symbol in SYSTEM_TRUSTED_KEYRING SECURITY_DMESG_RESTRICT \
         printf 'Required release protection missing: %s\n' "$symbol" >&2; exit 1;
     }
 done
-grep -Fxq '# CONFIG_MODULE_SIG is not set' "$config" || {
-    echo 'MODULE_SIG state unexpected; matching lines:' >&2
-    grep -n 'MODULE_SIG' "$config" >&2 || true
+grep -Fxq '# CONFIG_MODULE_SIG_FORCE is not set' "$config" || {
+    echo 'MODULE_SIG_FORCE unexpectedly enabled' >&2
     exit 1
 }
 grep -Fxq 'CONFIG_SYSTEM_TRUSTED_KEYS=""' "$config" || {
