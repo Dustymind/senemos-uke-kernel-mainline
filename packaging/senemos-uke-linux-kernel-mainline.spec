@@ -232,8 +232,6 @@ uke_check_start=$SECONDS
 bash native-profile/tests/optional-gaming-platform.sh %{_uke_out}/.config \
     %{buildroot}/usr/lib/modules/%{krel} %{krel} %{_uke_out}
 bash native-profile/tests/kernel-hardening-config-contract.sh %{_uke_out}/.config
-bash native-profile/tests/kernel-module-signatures-contract.sh "$PWD" \
-    %{buildroot}/usr/lib/modules/%{krel} %{buildroot}/usr/share/senemos/uke/%{krel}/module-signing.x509
 bash native-profile/tests/msm-kms-alternate-build.sh "$PWD" %{_uke_out} %{buildroot} '%{krel}'
 test ! -e %{_uke_out}/certs/signing_key.pem
 test -s %{buildroot}%{_docdir}/%{name}/%{krel}/README.md
@@ -404,7 +402,7 @@ identity=%{buildroot}/usr/share/senemos/uke/%{krel}
 mkdir -p "$identity"
 bash native-profile/src/audio/desktop/install-policy.sh '%{buildroot}' '%{krel}'
 install -m644 native-profile/SHA256SUMS native-profile/source-commit native-profile/README.md "$identity/"
-install -m644 native-profile/source-composition.json %{_uke_out}/module-signing.x509 "$identity/"
+install -m644 native-profile/source-composition.json "$identity/"
 install -m644 senemos-adaptation/source-lock.json senemos-applied-patches.txt "$identity/"
 install -Dm644 native-generated/POCO-Pad-X1-AudioReach-tplg.bin \
     %{buildroot}/usr/lib/firmware/%{krel}/qcom/sm7675/POCO-Pad-X1-AudioReach-tplg.bin
