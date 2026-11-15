@@ -15,9 +15,8 @@ Signed-off-by: Mürşit Can Cihan <75160848+MCC45TR@users.noreply.github.com>
 ---
 --- a/drivers/interconnect/qcom/qnoc-cliffs-usb.c
 +++ b/drivers/interconnect/qcom/qnoc-cliffs-usb.c
-@@ -21,10 +21,14 @@
+@@ -21,8 +21,12 @@
  #define MASTER_A1NOC_SNOC	8
- #define MASTER_A2NOC_SNOC	9
  #define MASTER_GEM_NOC_CNOC	15
 +#define MASTER_LPASS_GEM_NOC	18
 +#define MASTER_LPASS_LPINOC	19
@@ -25,12 +24,11 @@ Signed-off-by: Mürşit Can Cihan <75160848+MCC45TR@users.noreply.github.com>
  #define MASTER_SNOC_SF_MEM_NOC	27
  #define MASTER_CNOC_CFG	32
  #define MASTER_QUP_CORE_0	36
- #define MASTER_QUP_CORE_1	37
 +#define MASTER_LPASS_PROC	40
  #define MASTER_UFS_MEM	48
  #define MASTER_USB3_0	49
  #define SLAVE_EBI1	512
-@@ -37,6 +41,9 @@
+@@ -37,5 +41,8 @@
  #define SLAVE_GEM_NOC_CNOC	553
  #define SLAVE_SNOC_GEM_NOC_SF	554
  #define SLAVE_LLCC	555
@@ -39,7 +37,6 @@ Signed-off-by: Mürşit Can Cihan <75160848+MCC45TR@users.noreply.github.com>
 +#define SLAVE_LPICX_NOC_LPIAON_NOC	558
  #define SLAVE_CNOC_CFG	565
  #define SLAVE_QUP_CORE_0	572
- #define SLAVE_QUP_CORE_1	573
 @@ -73,6 +80,13 @@
  static struct qcom_icc_node qns_llcc;
  static struct qcom_icc_node ebi;

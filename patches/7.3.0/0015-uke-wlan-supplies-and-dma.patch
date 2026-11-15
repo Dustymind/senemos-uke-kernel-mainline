@@ -38,20 +38,23 @@ diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu-qcom.c b/drivers/iommu/arm/arm-
 diff --git a/drivers/regulator/qcom-rpmh-regulator-uke.c b/drivers/regulator/qcom-rpmh-regulator-uke.c
 --- a/drivers/regulator/qcom-rpmh-regulator-uke.c
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -1991,13 +1991,20 @@
+@@ -1991,18 +1991,25 @@
  		return rc;
  	}
  
--	/* Limit this data-only experiment to the six required supply resources. */
-+	/* OEM Uke supplies required by CPU, USB, UFS, WCN6750 and Focus Keyboard. */
+-	/* Limit this data-only experiment to the required supply resources. */
++	/* OEM Uke supplies required by CPU, USB, UFS, WLAN and Focus Keyboard. */
  	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
+ 	    strcmp(aggr_vreg->resource_name, "lcx.lvl") &&
+ 	    strcmp(aggr_vreg->resource_name, "lmx.lvl") &&
+ 	    strcmp(aggr_vreg->resource_name, "mxc.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "ldob2") &&
  	    strcmp(aggr_vreg->resource_name, "ldob4") &&
  	    strcmp(aggr_vreg->resource_name, "ldob7") &&
--	    strcmp(aggr_vreg->resource_name, "ldob17"))
-+	    strcmp(aggr_vreg->resource_name, "ldob17") &&
-+	    strcmp(aggr_vreg->resource_name, "ldob22") &&
+ 	    strcmp(aggr_vreg->resource_name, "ldob17") &&
+ 	    strcmp(aggr_vreg->resource_name, "ldob22") &&
+-	    strcmp(aggr_vreg->resource_name, "ldob23"))
 +	    strcmp(aggr_vreg->resource_name, "ldob23") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb2") &&
 +	    strcmp(aggr_vreg->resource_name, "smpb1") &&
@@ -137,7 +140,7 @@ diff --git a/drivers/net/wireless/ath/ath11k/ahb.c b/drivers/net/wireless/ath/at
  
  static void ath11k_ahb_init_qmi_ce_config(struct ath11k_base *ab)
 @@ -1150,6 +1197,10 @@
- 	ab->fw_mode = ATH11K_FIRMWARE_MODE_NORMAL
+ 	ab->fw_mode = ATH11K_FIRMWARE_MODE_NORMAL;
  	platform_set_drvdata(pdev, ab);
  
 +	ret = ath11k_ahb_uke_regulators(ab);

@@ -10,9 +10,8 @@ Source: Xiaomi SM7675 kernel 5712080a4b0c0b1a879e6d145c601c649ddaddfd.
 diff --git a/drivers/interconnect/qcom/qnoc-cliffs-usb.c b/drivers/interconnect/qcom/qnoc-cliffs-usb.c
 --- a/drivers/interconnect/qcom/qnoc-cliffs-usb.c
 +++ b/drivers/interconnect/qcom/qnoc-cliffs-usb.c
-@@ -21,6 +21,7 @@
+@@ -21,5 +21,6 @@
  #define MASTER_A1NOC_SNOC	8
- #define MASTER_A2NOC_SNOC	9
  #define MASTER_GEM_NOC_CNOC	15
 +#define MASTER_GFX3D	17
  #define MASTER_LPASS_GEM_NOC	18

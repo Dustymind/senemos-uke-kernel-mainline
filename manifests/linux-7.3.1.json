@@ -66,6 +66,10 @@
       "sha256": "99f958bd34a7c4def62323e58bb6e30d12be82097f3447b7f034c0b6d5e21742"
     },
     {
+      "path": "patches/7.3.0/0015-uke-wlan-supplies-and-dma.patch",
+      "sha256": "8e33bcda0b28b6acdb15f4f177c67e27822f1e13c7edb276a46a3df6838a2d9d"
+    },
+    {
       "path": "patches/7.3.0/0017-cliffs-gpio-function-flag.patch",
       "sha256": "7b87ac3a643c166f768485128b8b1e693a8fc4d6d91fba931493c6c33ebca514"
     },
@@ -95,7 +99,7 @@
     },
     {
       "path": "patches/7.3.0/0026-cliffs-lpass-adsp-interconnect.patch",
-      "sha256": "f956f107cd2fc565641b24703ffce23178916ef6815d6323ca4237db4d50c25a"
+      "sha256": "f6223240cd3929c8b7b92b5bdbb1cc613c3b2658e5bd1d6aed7dd0b26531cf36"
     },
     {
       "path": "patches/7.3.0/0027-uke-oem-gpr-domain.patch",
@@ -143,7 +147,7 @@
     },
     {
       "path": "patches/7.3.0/0037-uke-gpu-interconnect.patch",
-      "sha256": "134ab7cafe6c1754ad9850f51197d401fa7470dcd04ee7f205dfed8dd30e16cc"
+      "sha256": "8a30325d58138b02de999ebe0b2fa9f3a9f3e7ec2530d8a9aa5a39d07d024e65"
     },
     {
       "path": "patches/7.3.0/0038-uke-handoff-panel-metadata.patch",
@@ -295,7 +299,7 @@
     },
     {
       "path": "patches/7.3.0/0075-uke-qmp-ldob3-supplier.patch",
-      "sha256": "1f1be3959b9ce795133e46fd7ef801edd03035d819760eea5c489e8aae8880a2"
+      "sha256": "7f255de12552f524e7933d4eda9a4c66ee01e28f4b6ef58104fc221198b3c6b1"
     },
     {
       "path": "patches/7.3.0/0076-uke-charge-readonly-settings.patch",

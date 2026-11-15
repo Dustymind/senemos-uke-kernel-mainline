@@ -14,4 +14,4 @@ index ec803ee..15411b4 100644
 @@ -2003,2 +2003,3 @@ static int rpmh_regulator_probe(struct platform_device *pdev)
  	    strcmp(aggr_vreg->resource_name, "ldob17") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob3") &&
- 	    strcmp(aggr_vreg->resource_name, "smpb2") &&
+ 	    strcmp(aggr_vreg->resource_name, "ldob22") &&
