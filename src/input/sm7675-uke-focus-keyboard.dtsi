@@ -24,21 +24,24 @@
 	fragment@251 {
 		target = <&qupv3_se3_i2c>;
 		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "okay";
 
 			nanosic@4c {
-				compatible = "nanosic,803";
+				compatible = "nanosic,wn8030", "nanosic,803";
 				reg = <0x4c>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&xiaomi_keyboard_sleep_default>, <&xiaomi_keyboard_default>;
-				irq_pin = <&tlmm>, <0x74 0x2001>;
-				reset_pin = <&tlmm>, <0x7f 0x00>;
-				status_pin = <&tlmm>, <0x80 0x00>;
-				sleep_pin = <&tlmm>, <0x62 0x00>;
-				nanosic,vdd-name = "vdd";
+				interrupt-parent = <&tlmm>;
+				interrupts = <116 IRQ_TYPE_EDGE_RISING>;
+				reset-gpios = <&tlmm 127 GPIO_ACTIVE_LOW>;
+				status-gpios = <&tlmm 128 GPIO_ACTIVE_HIGH>;
+				sleep-gpios = <&tlmm 98 GPIO_ACTIVE_LOW>;
 				vdd-supply = <&L22B>;
-				nanosic,dvdd-name = "dvdd";
 				dvdd-supply = <&L23B>;
+				vddio-supply = <&L23B>;
+				nanosic,vdd-name = "vdd";
+				nanosic,dvdd-name = "dvdd";
+				firmware-name = "nanosic/MCU_Upgrade.bin";
 				touchpad,edge-area-left-min = <0x00>;
 				touchpad,edge-area-left-max = <0x140>;
 				touchpad,edge-area-right-min = <0xb3f>;
