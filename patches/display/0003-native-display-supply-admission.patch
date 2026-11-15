@@ -24,7 +24,7 @@ unqualified until a separate physical test.
  		return rc;
  	}
  
--	/* OEM Uke supplies required by CPU, USB, UFS, WLAN, ADSP and GPU clocks. */
+-	/* OEM Uke supplies required by CPU, USB, UFS, WLAN and Focus Keyboard. */
 +	/* Reviewed OEM Uke supplies, including native display MMCX and panel IO. */
  	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
  	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
