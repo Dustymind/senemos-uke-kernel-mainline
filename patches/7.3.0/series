@@ -13,12 +13,14 @@
 0013-uke-usb-role-and-phy-error-gates.patch
 0014-cliffs-wpss-proxy-regulators.patch
 0015-uke-wlan-supplies-and-dma.patch
+0016-uke-wlan-ordered-rails.patch
 0017-cliffs-gpio-function-flag.patch
 0018-rpmsg-channel-modalias-fallback.patch
 0019-spmi-sdam-nvmem-aperture.patch
 0020-cliffs-adsp-pas.patch
 0021-cliffs-gpu-clock-handoff.patch
 0022-ktz8866-write-errors.patch
+0023-uke-qup1-backlight-bus.patch
 0025-uke-paired-normal-backlight.patch
 0026-cliffs-lpass-adsp-interconnect.patch
 0027-uke-oem-gpr-domain.patch

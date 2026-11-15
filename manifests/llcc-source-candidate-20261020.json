@@ -29,7 +29,7 @@
     },
     {
       "path": "packaging/native/native.config",
-      "sha256": "5e366b3fdf5c92e9ee8e9613e117e3cab1e8c5fd3dc9d044aa37683b72af6598"
+      "sha256": "5a9e023d691d2a77fce3b6b6e6508ef8f7cc89c467a74cea0a1a6e3a6529d683"
     },
     {
       "path": "packaging/native/prepare.sh",
@@ -229,7 +229,7 @@
     },
     {
       "path": "src/audio/POCO-Pad-X1.conf",
-      "sha256": "6008c22d4a2f380d30683c38f9ef4c924651771b819a2ca0cfd456f52f43de87"
+      "sha256": "5a946701d5e2686d5adae1ee4981e0a4d2b0300ba21990e8c6b65280c373e02d"
     },
     {
       "path": "src/audio/desktop/array-ucm2/DP-ELD.conf",

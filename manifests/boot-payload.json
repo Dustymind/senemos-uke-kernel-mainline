@@ -29,7 +29,7 @@
     },
     {
       "path": "packaging/native/native.config",
-      "sha256": "5e366b3fdf5c92e9ee8e9613e117e3cab1e8c5fd3dc9d044aa37683b72af6598"
+      "sha256": "5a9e023d691d2a77fce3b6b6e6508ef8f7cc89c467a74cea0a1a6e3a6529d683"
     },
     {
       "path": "packaging/native/prepare.sh",
@@ -265,7 +265,7 @@
     },
     {
       "path": "src/audio/POCO-Pad-X1.conf",
-      "sha256": "6008c22d4a2f380d30683c38f9ef4c924651771b819a2ca0cfd456f52f43de87"
+      "sha256": "5a946701d5e2686d5adae1ee4981e0a4d2b0300ba21990e8c6b65280c373e02d"
     },
     {
       "path": "src/audio/desktop/LICENSE",
@@ -737,7 +737,7 @@
     },
     {
       "path": "tests/kernel-hardening-config-contract.sh",
-      "sha256": "226e0f37b887624bbf6e8569eb06a926ac81e24f04d8d5d99332bfcb6f9e7eda"
+      "sha256": "4825609828c24831f9b311d421e90534c57106e796ce5274c123a30521700fd3"
     },
     {
       "path": "tests/l3-provider-contract.sh",
@@ -1041,7 +1041,7 @@
     },
     {
       "path": "tests/wlan-power-contract.sh",
-      "sha256": "c2dbfe20a8926b3653cc76c46597c67742e71fa7f0afb42f97d8adaf69baa08d"
+      "sha256": "96bb052e278f5696baceecc220c03e7ddf2c730074f16babd79a490d7121c5ee"
     },
     {
       "path": "tests/wpss-proxy-contract.sh",
