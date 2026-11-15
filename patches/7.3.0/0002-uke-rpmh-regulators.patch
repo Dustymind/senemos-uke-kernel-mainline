@@ -438,7 +438,7 @@ new file mode 100644
 index 000000000000..9b68d9a26ca1
 --- /dev/null
 +++ b/drivers/regulator/qcom-rpmh-regulator-uke.c
-@@ -0,0 +1,2121 @@
+@@ -0,0 +1,2124 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/* Copyright (c) 2016-2021, The Linux Foundation. All rights reserved. */
 +/* Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved. */
@@ -2432,9 +2432,12 @@ index 000000000000..9b68d9a26ca1
 +		return rc;
 +	}
 +
-+	/* Limit this data-only experiment to the eight required supply resources. */
++	/* Limit this data-only experiment to the required supply resources. */
 +	if (strcmp(aggr_vreg->resource_name, "cx.lvl") &&
 +	    strcmp(aggr_vreg->resource_name, "mx.lvl") &&
++	    strcmp(aggr_vreg->resource_name, "lcx.lvl") &&
++	    strcmp(aggr_vreg->resource_name, "lmx.lvl") &&
++	    strcmp(aggr_vreg->resource_name, "mxc.lvl") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob2") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob4") &&
 +	    strcmp(aggr_vreg->resource_name, "ldob7") &&

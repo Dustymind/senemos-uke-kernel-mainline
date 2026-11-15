@@ -15,7 +15,7 @@
     },
     {
       "path": "patches/7.3.0/0002-uke-rpmh-regulators.patch",
-      "sha256": "0cacbbba6cf4d13736dd9817417225b4764ac4205151a5805b066be8491e4037"
+      "sha256": "f620dd558da35faaa26ca6a1d0dd4316d7808704f14ffe2a2860ab737598df00"
     },
     {
       "path": "patches/7.3.0/0003-cliffs-tlmm.patch",
