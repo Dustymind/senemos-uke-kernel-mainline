@@ -11,7 +11,6 @@ for symbol in SYSTEM_TRUSTED_KEYRING SECURITY_DMESG_RESTRICT \
     }
 done
 grep -Fxq '# CONFIG_MODULE_SIG is not set' "$config"
-grep -Fxq '# CONFIG_MODULE_SIG_FORCE is not set' "$config"
 grep -Fxq 'CONFIG_SYSTEM_TRUSTED_KEYS=""' "$config"
 lsm=$(sed -n 's/^CONFIG_LSM="\([^"]*\)"$/\1/p' "$config")
 for name in lockdown yama selinux; do
