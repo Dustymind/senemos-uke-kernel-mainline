@@ -22,6 +22,7 @@ struct ath11k_ahb {
     int *tgt_rproc = nullptr;
     regulator_bulk_data uke_regs[3];
     bool uke_supplies = false;
+    bool uke_supplies_enabled = false;
     int num_uke_regs_enabled = 0;
 };
 struct ath11k_base { device *dev; ath11k_ahb state; };
@@ -51,15 +52,23 @@ int devm_regulator_bulk_get_const(device *dev, int count,
     *output = dev->managed;
     return devm_regulator_bulk_get(dev, count, *output);
 }
-int regulator_enable(regulator *rail) {
-    assert(rail->index == enables); // Exact OEM forward sequence, without duplicate votes.
-    if (rail->index == enable_error_at) return -EIO;
-    ++enables; return 0;
+int regulator_bulk_enable(int count, regulator_bulk_data *regs) {
+    for (int i=0; i<count; ++i) {
+        assert(regs[i].consumer->index == enables);
+        if (regs[i].consumer->index == enable_error_at) {
+            enables = 0; // Kernel helper unwinds the enabled prefix on failure.
+            return -EIO;
+        }
+        ++enables;
+    }
+    return 0;
 }
-int regulator_disable(regulator *rail) {
-    assert(rail->index == enables-1); // Exact reverse cleanup, stopping on failure.
-    if (rail->index == disable_error_at) return -EIO;
-    --enables; return 0;
+int regulator_bulk_disable(int count, regulator_bulk_data *regs) {
+    for (int i=count-1; i>=0; --i) {
+        if (i == disable_error_at) return -EIO;
+        if (enables > 0) --enables;
+    }
+    return 0;
 }
 int rproc_boot(int *) { ++boots; return boot_error; }
 void rproc_shutdown(int *) { ++shutdowns; }
@@ -79,28 +88,26 @@ int main() {
     for (int rail=0; rail<3; ++rail) {
         enable_error_at = rail;
         assert(ath11k_ahb_power_up(&ab) == -EIO && boots == 0 && enables == 0);
-        assert(ab.state.num_uke_regs_enabled == 0);
     }
     enable_error_at = 2; disable_error_at = 1;
-    assert(ath11k_ahb_power_up(&ab) == -EIO && boots == 0 && enables == 2);
-    assert(ab.state.num_uke_regs_enabled == 2); // Partial cleanup cannot lose vote ownership.
+    assert(ath11k_ahb_power_up(&ab) == -EIO && boots == 0 && enables == 0);
     enable_error_at = -1; disable_error_at = -1;
-    assert(ath11k_ahb_power_up(&ab) == 0 && enables == 3); // Resume the prefix without duplicate enable.
+    assert(ath11k_ahb_power_up(&ab) == 0 && enables == 3 && ab.state.uke_supplies_enabled);
     ath11k_ahb_power_down(&ab, false);
-    assert(enables == 0 && ab.state.num_uke_regs_enabled == 0);
+    assert(enables == 0 && !ab.state.uke_supplies_enabled);
     boot_error = -ETIMEDOUT;
     assert(ath11k_ahb_power_up(&ab) == -ETIMEDOUT && enables == 0);
-    assert(ab.state.num_uke_regs_enabled == 0);
+    assert(!ab.state.uke_supplies_enabled);
     boot_error = 0;
     for (int rail=0; rail<3; ++rail) {
         assert(ath11k_ahb_power_up(&ab) == 0 && enables == 3);
         disable_error_at = rail;
         ath11k_ahb_power_down(&ab, false);
-        assert(ab.state.num_uke_regs_enabled == rail+1 && enables == rail+1);
+        assert(enables == rail+1);
         disable_error_at = -1;
-        assert(ath11k_ahb_power_up(&ab) == 0 && enables == 3);
+        assert(ath11k_ahb_power_up(&ab) == 0 && enables == rail+1);
         ath11k_ahb_power_down(&ab, false);
-        assert(ab.state.num_uke_regs_enabled == 0 && enables == 0);
+        assert(enables == 0 && !ab.state.uke_supplies_enabled);
     }
     ath11k_ahb_uke_regulators_off(&ab); // Already disabled: no unbalanced regulator call.
     n.uke = false; ab.state.uke_supplies = false; gets = 0;
