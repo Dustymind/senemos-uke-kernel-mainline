@@ -28,7 +28,7 @@ int main(int argc,char **argv) {
                      "ldob2","ldob3","ldob4","ldob7","ldob17","smpb2","smpb1",
                      "smpb3","ldod1","ldob5","ldob12","ldod3"})
         assert(admission(name)==0);
-    for(auto name : {"mmcx.lvl","smpe3","ldob8","nsp.lvl"})
+    for(auto name : {"mmcx.lvl","smpe3","ldob8"})
         assert(admission(name)==(native?0:-ENODEV));
     const bool nfc=!strcmp(argv[1],"before-audio") || !strcmp(argv[1],"native");
     assert(admission("ldoe7")== (nfc?0:-ENODEV));

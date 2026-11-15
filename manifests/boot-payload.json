@@ -33,7 +33,7 @@
     },
     {
       "path": "packaging/native/prepare.sh",
-      "sha256": "0e3f5ce9101a28b0ec0e9d3ee9472185cdb96daaa7b79ea1dc1ba0c7a16f2b08"
+      "sha256": "762aafaf774dacb3f4f8ad5d63d356e4a2f1991e3af62b3b64b446dc53c75938"
     },
     {
       "path": "patches/boot/0005-uke-root-selector.patch",
@@ -81,7 +81,7 @@
     },
     {
       "path": "patches/boot/0025-cliffs-nsp-crypto-suppliers.patch",
-      "sha256": "e399e4d8464b5fbbaaaa7390a2f855f97ca5b9972bf963a097cd671c9b2523fe"
+      "sha256": "4bf33948a52608fc9e91390e611e4fe6b1a4dbe1932af9d98e6ae6cde4f69641"
     },
     {
       "path": "patches/boot/0026-cliffs-proxy-and-pas-stop-ownership.patch",
@@ -989,7 +989,7 @@
     },
     {
       "path": "tests/uke-rpmh-resource-contract.sh",
-      "sha256": "d23a55bab65b970c9637b32abec20a6d0476b5f5c5fe3a051d43d0c33a142a48"
+      "sha256": "f2489ed32ff4aa56610b4781ec694975b3982b47a18e619b24ba5c89987292a5"
     },
     {
       "path": "tests/usb-typec-fdt-check.cpp",

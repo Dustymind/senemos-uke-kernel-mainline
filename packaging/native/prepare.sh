@@ -162,9 +162,8 @@ if [[ $(cat "$profile/audio-profile") =~ ^(hdmi-only|speakers|microphones)$ ]]; 
     fi
 fi
 # NSP shares SH1 with the native display and video paths prepared above.
-for cdsp_patch in 0025-cliffs-nsp-crypto-suppliers.patch \
-    0026-cliffs-proxy-and-pas-stop-ownership.patch 0027-remoteproc-early-stop.patch \
-    0028-cliffs-proxy-per-rail-ownership.patch; do
+for cdsp_patch in 0026-cliffs-proxy-and-pas-stop-ownership.patch \
+    0027-remoteproc-early-stop.patch 0028-cliffs-proxy-per-rail-ownership.patch; do
     git -C "$kernel" apply --check "$profile/patches/boot/$cdsp_patch"
     git -C "$kernel" apply "$profile/patches/boot/$cdsp_patch"
 done
