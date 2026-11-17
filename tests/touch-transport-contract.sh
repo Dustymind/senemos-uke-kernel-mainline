@@ -25,15 +25,19 @@ awk '
 "${CC:-cc}" -std=gnu11 -O2 -g -Wall -Wextra -Werror -Wno-unused-parameter \
     "${sanitize[@]}" -pthread -I "$stage" "$root/tests/touch-panel-notifier.c" -o "$stage/panel"
 timeout 30s "$stage/panel"
-mkdir -p "$stage/kernel/drivers/input/touchscreen" "$stage/kernel/include/linux"
+mkdir -p "$stage/kernel/drivers/input/touchscreen" "$stage/kernel/drivers/input/keyboard" "$stage/kernel/include/linux"
 printf '# fixture\n' > "$stage/kernel/drivers/input/touchscreen/Kconfig"
 printf '# fixture\n' > "$stage/kernel/drivers/input/touchscreen/Makefile"
+printf '# fixture\n' > "$stage/kernel/drivers/input/keyboard/Kconfig"
+printf '# fixture\n' > "$stage/kernel/drivers/input/keyboard/Makefile"
 printf 'CONFIG_TOUCHSCREEN_NT36532_UKE is not set\n' > "$stage/kernel/.config"
 before=$(sha256sum "$stage/kernel/.config")
 bash "$root/src/input/prepare-source.sh" "$stage/kernel"
 [[ $before == "$(sha256sum "$stage/kernel/.config")" ]]
 cmp "$root/src/input/nt36532-uke-spi.c" "$stage/kernel/drivers/input/touchscreen/nt36532-uke/nt36532-uke-spi.c"
 cmp "$root/src/display/uke-o82-touch.h" "$stage/kernel/include/linux/uke-o82-touch.h"
+cmp "$root/src/input/nanosic-uke/nanosic-803.c" "$stage/kernel/drivers/input/keyboard/nanosic-803.c"
+grep -Fx 'obj-$(CONFIG_KEYBOARD_XIAOMI_NANOSIC803) += nanosic-803.o' "$stage/kernel/drivers/input/keyboard/Makefile"
 if bash "$root/src/input/prepare-source.sh" "$stage/kernel"; then
     echo 'Duplicate staging unexpectedly accepted' >&2; exit 1
 fi
@@ -41,5 +45,6 @@ profile=$root/packaging/native
 [[ -f $profile/prepare.sh ]] || profile=$root
 grep -Fx 'bash "$profile/src/input/prepare-source.sh" "$kernel"' "$profile/prepare.sh"
 grep -Fx 'CONFIG_TOUCHSCREEN_NT36532_UKE=m' "$profile/native.config"
+grep -Fx 'CONFIG_KEYBOARD_XIAOMI_NANOSIC803=m' "$profile/native.config"
 grep -Fx '#include "../input/sm7675-uke-thp.dtsi"' "$root/src/display/sm7675-uke-native-display-oem-modes.dtso"
 printf 'Explicit staging and matched release selection: PASS\n'

@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config KEYBOARD_XIAOMI_NANOSIC803
+	tristate "Xiaomi Nanosic 803 pogo keyboard and touchpad"
+	depends on I2C && OF && INPUT_KEYBOARD
+	help
+	  Support the Nanosic 803 controller in the POCO Pad X1 focus
+	  keyboard. Reports the key matrix, the touchpad and the keyboard
+	  backlight through Linux input and LED class.
+
+	  MiAuth is not implemented. The controller may stop reporting after
+	  an idle timeout until it is reset.

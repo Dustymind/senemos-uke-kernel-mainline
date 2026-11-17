@@ -29,7 +29,7 @@
     },
     {
       "path": "packaging/native/native.config",
-      "sha256": "cfdd93a74b415482233e8ded4b31f050b28b715b31656c5841f8b61e15e9cae4"
+      "sha256": "1cf9859c060b7ff870112b85159ddc04aa9ad7b0483a3d11569bbe7bfda7f6c0"
     },
     {
       "path": "packaging/native/prepare.sh",
@@ -405,7 +405,7 @@
     },
     {
       "path": "src/input/prepare-source.sh",
-      "sha256": "7fd928c26f2ff7434d8e4d67c96c4f7fd6d496ccca0b760aeec61960d414bccd"
+      "sha256": "85300d0c84035acc06d6925fbc939d369770222a189ae3c27a2dde23ff066e54"
     },
     {
       "path": "src/input/sm7675-uke-thp.dtsi",
@@ -725,7 +725,7 @@
     },
     {
       "path": "tests/touch-transport-contract.sh",
-      "sha256": "fef82d0f4897938384686636b5afe447a88fffb2de3cf5f6022cf9112afc6466"
+      "sha256": "0bc7731d8ac2042e0046dac537b648f4911a5bc828fceeb65bf518709880544e"
     },
     {
       "path": "tests/touch-transport.c",

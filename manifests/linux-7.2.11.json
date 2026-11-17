@@ -411,7 +411,7 @@
     },
     {
       "path": "configs/uke.config",
-      "sha256": "5296cbf69279930ad1486c164b87c098ce1bd23bbd1b1dd350ccdbfd774e8bf6"
+      "sha256": "f445d7235c89eee77218656abaca7cc0e7dddc688b4a242e1b788982fd3b4c7a"
     },
     {
       "path": "configs/fedora.config",
