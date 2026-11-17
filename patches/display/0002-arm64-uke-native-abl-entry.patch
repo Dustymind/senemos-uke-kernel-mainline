@@ -10,7 +10,8 @@ evidence and must not be added to the normal release series.
 
 --- a/arch/arm64/kernel/uke-abl.c
 +++ b/arch/arm64/kernel/uke-abl.c
-@@ -1069,5 +1069,7 @@
+@@ -1109,6 +1109,8 @@ int UKE_INIT uke_abl_transform(void *output, size_t capacity,
+  * after free_initmem(). The original bootloader allocation stays reserved.
   */
  static unsigned char uke_fdt[UKE_FDT_CAPACITY] __ro_after_init __aligned(8);
 +#include "uke-abl-native.h"
@@ -18,10 +19,10 @@ evidence and must not be added to the normal release series.
  #include "uke-lights.h"
  
  void *__init uke_abl_prepare_fdt(void *input, int size, phys_addr_t *physical)
-@@ -1080,6 +1082,14 @@
- 	ret = uke_abl_transform(uke_fdt, sizeof(uke_fdt), input, size,
+@@ -1121,6 +1123,14 @@ void *__init uke_abl_prepare_fdt(void *input, int size, phys_addr_t *physical)
  			      uke_ufs_overlay, sizeof(uke_ufs_overlay),
- 			      uke_usb_overlay, sizeof(uke_usb_overlay));
+ 			      uke_usb_overlay, sizeof(uke_usb_overlay),
+ 			      uke_keyboard_overlay, sizeof(uke_keyboard_overlay));
 +	if (ret > 0) {
 +		ret = fdt_open_into(uke_fdt, uke_fdt, sizeof(uke_fdt));
 +		if (!ret)
@@ -33,7 +34,7 @@ evidence and must not be added to the normal release series.
  	if (ret < 0) {
  		pr_crit("Uke ABL DT adaptation rejected (%d); refusing incomplete board graph\n", ret);
  		while (true)
-@@ -1102,7 +1112,7 @@
+@@ -1143,7 +1153,7 @@ void *__init uke_abl_prepare_fdt(void *input, int size, phys_addr_t *physical)
  		pr_warn("Uke lights: OEM graph not admitted; light controls unavailable\n");
  	}
  	*physical = __pa_symbol(uke_fdt);

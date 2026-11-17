@@ -1077,7 +1077,7 @@
     },
     {
       "path": "patches/display/0002-arm64-uke-native-abl-entry.patch",
-      "sha256": "09f62e2777beffa10074615148203bbaff800786d5143c7df60fbbeacbfb5e3a"
+      "sha256": "56f1c6f19a3c11d236cd8eb3c2cfb07ed924c1251f981c8f2033f87ea1377815"
     },
     {
       "path": "tests/touch-config-map.cpp",
