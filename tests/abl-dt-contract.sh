@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Kernel-libfdt host fixtures; never a hardware result.
 set -Eeuo pipefail
-[[ $# == 5 && -x $1 && -s $2 && -s $3 && -s $4 && ! -e $5 ]] || exit 2
-binary=$1 input=$2 ufs=$3 usb=$4 out=$5
+[[ $# == 6 && -x $1 && -s $2 && -s $3 && -s $4 && -s $5 && ! -e $6 ]] || exit 2
+binary=$1 input=$2 ufs=$3 usb=$4 keyboard=$5 out=$6
 mkdir -p "$out"
-"$binary" "$input" "$ufs" "$usb" "$out/admitted.dtb"
+"$binary" "$input" "$ufs" "$usb" "$keyboard" "$out/admitted.dtb"
 [[ $(fdtget -t s "$out/admitted.dtb" / compatible) == 'xiaomi,uke qcom,sm7675 qcom,cliffs' ]]
 [[ $(fdtget -t s "$out/admitted.dtb" / model) == 'Xiaomi Pad 7' ]]
 resin=/soc/qcom,spmi@c42d000/qcom,pmk8550@0/pon_hlos@1300/resin
@@ -101,7 +101,7 @@ for node in "$primary" "$secondary"; do
 done
 cp "$input" "$out/existing-backlight-phandle.dtb"
 fdtput -t x "$out/existing-backlight-phandle.dtb" "$secondary" phandle "$(fdtget -t x "$out/admitted.dtb" "$secondary" phandle)"
-"$binary" "$out/existing-backlight-phandle.dtb" "$ufs" "$usb" "$out/existing-backlight-admitted.dtb"
+"$binary" "$out/existing-backlight-phandle.dtb" "$ufs" "$usb" "$keyboard" "$out/existing-backlight-admitted.dtb"
 [[ $(fdtget -t x "$out/existing-backlight-admitted.dtb" "$primary" xiaomi,secondary) == "$(fdtget -t x "$out/existing-backlight-phandle.dtb" "$secondary" phandle)" ]]
 for parent in "$second" "$bus"; do
     for child in $(fdtget -l "$out/admitted.dtb" "$parent"); do
@@ -115,8 +115,22 @@ touch=$first/spi@a90000/novatek@0
 usb_mux=$first/i2c@a80000/wcd939x_i2c@e
 tlmm_phandle=$(fdtget -t x "$input" "$tlmm" phandle)
 for child in $(fdtget -l "$out/admitted.dtb" "$first"); do
-    case "$child" in i2c@a80000|spi@a90000) continue;; esac
+    case "$child" in i2c@a80000|i2c@a8c000|spi@a90000) continue;; esac
     [[ $(fdtget -t s "$out/admitted.dtb" "$first/$child" status) == disabled ]]
+done
+kb_bus=$first/i2c@a8c000
+kb=$kb_bus/nanosic@4c
+gpi0=$(fdtget -t x "$input" /soc/qcom,gpi-dma@a00000 phandle)
+[[ $(fdtget -t s "$out/admitted.dtb" "$kb_bus" compatible) == qcom,geni-i2c ]]
+[[ $(fdtget -t s "$out/admitted.dtb" "$kb_bus" status) == okay ]]
+[[ $(fdtget -t u "$out/admitted.dtb" "$kb_bus" clock-frequency) == 1000000 ]]
+[[ $(fdtget -t x "$out/admitted.dtb" "$kb_bus" dmas) == "$gpi0 0 3 3 $gpi0 1 3 3" ]]
+[[ $(fdtget -t s "$out/admitted.dtb" "$kb" compatible) == nanosic,803 ]]
+[[ $(fdtget -t x "$out/admitted.dtb" "$kb" irq-gpios) == "$tlmm_phandle 74 0" ]]
+[[ $(fdtget -t x "$out/admitted.dtb" "$kb" reset-gpios) == "$tlmm_phandle 7f 1" ]]
+[[ $(fdtget -t x "$out/admitted.dtb" "$kb" sleep-gpios) == "$tlmm_phandle 62 1" ]]
+for property in reg vdd-supply dvdd-supply pinctrl-0 pinctrl-names panel; do
+    [[ $(fdtget -t x "$out/admitted.dtb" "$kb" "$property") == "$(fdtget -t x "$input" "$kb" "$property")" ]]
 done
 [[ $(fdtget -t s "$out/admitted.dtb" "$tlmm/qupv3_se3_spi_pins/qupv3_se3_spi_clk_active/mux" function) == qup0_se3_l2 ]]
 for corner in top_left top_right bottom_left bottom_right; do
@@ -143,7 +157,7 @@ framebuffer=$(fdtget -t s "$out/admitted.dtb" /chosen stdout-path)
 [[ $(fdtget -t x "$out/admitted.dtb" "$framebuffer" panel) == "$(fdtget -t x "$out/admitted.dtb" /panel-uke-handoff phandle)" ]]
 cp "$input" "$out/panel-metadata-collision.dtb"
 fdtput -c "$out/panel-metadata-collision.dtb" /panel-uke-handoff
-if "$binary" "$out/panel-metadata-collision.dtb" "$ufs" "$usb" "$out/panel-metadata-collision-output.dtb"; then exit 1; fi
+if "$binary" "$out/panel-metadata-collision.dtb" "$ufs" "$usb" "$keyboard" "$out/panel-metadata-collision-output.dtb"; then exit 1; fi
 [[ ! -e "$out/panel-metadata-collision-output.dtb" ]]
 spi=/soc/qcom,qupv3_0_geni_se@ac0000/spi@a90000
 [[ $(fdtget -t s "$out/admitted.dtb" "$spi" compatible) == qcom,geni-spi ]]
@@ -245,7 +259,7 @@ for scenario in gpu-chip gpu-irq gmu-base gpu-gx board graph symbols splash trun
     esac
     usb_input=$usb
     [[ $scenario != overlay ]] || usb_input=$out/bad.dtbo
-    if "$binary" "$out/$scenario.dtb" "$ufs" "$usb_input" "$out/rejected-$scenario.dtb"; then
+    if "$binary" "$out/$scenario.dtb" "$ufs" "$usb_input" "$keyboard" "$out/rejected-$scenario.dtb"; then
         echo "Invalid DT was admitted: $scenario" >&2; exit 1
     fi
     [[ ! -e $out/rejected-$scenario.dtb ]]
@@ -261,14 +275,14 @@ for scenario in rpc-channel rpc-compatible rpc-label rpc-pd rpc-map rpc-secure; 
         rpc-map) fdtput -t x "$out/$scenario.dtb" "$cb" iommus "$apps" 1005 80 "$apps" 1045 40;;
         rpc-secure) fdtput "$out/$scenario.dtb" "$cb" qcom,secure-context-bank;;
     esac
-    if "$binary" "$out/$scenario.dtb" "$ufs" "$usb" "$out/rejected-$scenario.dtb"; then
+    if "$binary" "$out/$scenario.dtb" "$ufs" "$usb" "$keyboard" "$out/rejected-$scenario.dtb"; then
         echo "Invalid FastRPC map was admitted: $scenario" >&2; exit 1
     fi
     [[ ! -e $out/rejected-$scenario.dtb ]]
 done
 printf '/dts-v1/; / { model="QEMU virtual fixture"; compatible="linux,dummy-virt"; };\n' | dtc -q -I dts -O dtb -o "$out/foreign.dtb"
 result=0
-"$binary" "$out/foreign.dtb" "$ufs" "$usb" "$out/foreign-output.dtb" || result=$?
+"$binary" "$out/foreign.dtb" "$ufs" "$usb" "$keyboard" "$out/foreign-output.dtb" || result=$?
 [[ $result == 3 && ! -e $out/foreign-output.dtb ]]
 for scenario in compatible clock irq enable-gpio swctrl-gpio supply load active-pin sleep-function reset-pinctrl child-collision; do
     file=$out/bt-$scenario.dtb
@@ -286,7 +300,7 @@ for scenario in compatible clock irq enable-gpio swctrl-gpio supply load active-
         reset-pinctrl) fdtput -t x "$file" /soc/bt_wcn6750 pinctrl-0 deadbeef;;
         child-collision) fdtput -c "$file" "$bt";;
     esac
-    if "$binary" "$file" "$ufs" "$usb" "$out/bt-rejected-$scenario.dtb"; then exit 1; fi
+    if "$binary" "$file" "$ufs" "$usb" "$keyboard" "$out/bt-rejected-$scenario.dtb"; then exit 1; fi
     [[ ! -e $out/bt-rejected-$scenario.dtb ]]
 done
 echo 'Live-stock DT transform, scoped DMA consumers and malformed-input/foreign-DT rejection groups passed'

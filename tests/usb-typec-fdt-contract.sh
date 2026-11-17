@@ -6,7 +6,7 @@ kernel=$(realpath "$1") input=$(realpath "$2") generated=$(realpath "$3")
 root=$(cd -- "$(dirname -- "$0")/.." && pwd)
 out=$(realpath -m "$4")
 [[ $(cat "$generated/usb-profile") == typec-v1 ]]
-for name in ufs usb display; do [[ -f $generated/$name.dtbo && ! -L $generated/$name.dtbo ]]; done
+for name in ufs usb keyboard display; do [[ -f $generated/$name.dtbo && ! -L $generated/$name.dtbo ]]; done
 mkdir -m700 "$out"
 # Same O82 source without DP is a comparison baseline, not an admitted hardware DT.
 cpp -nostdinc -undef -D__DTS__ -DO82_PANEL_VARIANT=42 -x assembler-with-cpp \
@@ -29,9 +29,9 @@ done
 "${CXX:-c++}" -std=c++20 -O2 -Wall -Wextra -Werror -I "$kernel/scripts/dtc/libfdt" \
     -idirafter "$kernel/include" "$root/tests/usb-typec-fdt-check.cpp" "$out/"*.o -o "$out/usb-typec-fdt-check"
 "$out/usb-typec-fdt-check" "$input" "$generated/ufs.dtbo" "$generated/usb.dtbo" \
-    "$generated/display.dtbo" "$out/baseline.dtbo" "$out/admitted-full.dtb"
+    "$generated/keyboard.dtbo" "$generated/display.dtbo" "$out/baseline.dtbo" "$out/admitted-full.dtb"
 sha256sum "$root/src/boot/uke-abl.c" "$root/src/display/uke-abl-native.h" \
     "$root/tests/usb-typec-fdt-check.cpp" "$root/tests/usb-typec-fdt-contract.sh" \
-    "$input" "$generated/ufs.dtbo" "$generated/usb.dtbo" "$generated/display.dtbo" \
-    "$out/baseline.dtbo" "$out/admitted-full.dtb" > "$out/SHA256SUMS"
+    "$input" "$generated/ufs.dtbo" "$generated/usb.dtbo" "$generated/keyboard.dtbo" \
+    "$generated/display.dtbo" "$out/baseline.dtbo" "$out/admitted-full.dtb" > "$out/SHA256SUMS"
 printf 'Full-profile host fixture completed; no tablet hardware acceptance\n'

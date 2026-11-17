@@ -180,10 +180,11 @@ for name in overlay check; do
 done
 header=$kernel/arch/arm64/kernel/uke-abl-overlays.h
 : > "$header"
-for name in ufs usb lights; do
+for name in ufs usb lights keyboard; do
     source=$here/sm7675-uke-ufs.dtso
     [[ $name != usb ]] || source=$here/sm7675-uke-usb2.dtso
     [[ $name != lights ]] || source=$here/sm7675-uke-lights.dtso
+    [[ $name != keyboard ]] || source=$here/../input/sm7675-uke-focus-keyboard.dtso
     if [[ $name == usb && $usb_profile == typec-v1 ]]; then source=$here/sm7675-uke-typec.dtso; fi
     cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp -I "$kernel/include" "$source" > "$output/$name.dts"
     dtc -q -@ -I dts -O dtb -o "$output/$name.dtbo" "$output/$name.dts"
@@ -195,7 +196,7 @@ for name in ufs usb lights; do
 done
 printf '%s\n' "$usb_profile" > "$output/usb-profile"
 printf '%s\n' "$llcc_profile" > "$output/llcc-profile"
-(cd "$output"; sha256sum ufs.dtbo usb.dtbo lights.dtbo > overlay-SHA256SUMS)
+(cd "$output"; sha256sum ufs.dtbo usb.dtbo lights.dtbo keyboard.dtbo > overlay-SHA256SUMS)
 sha256sum "$here/uke-abl.c" "$here/uke-ufs.h" "$here/uke-identity.c" "$here/uke-hardware.h" "$here/uke-bluetooth.h" "$here/vendor/fdt_check.c" "$here/vendor/source.json" \
     "$here/uke-pmic-adc.h" "$here/uke-cpu-thermal.h" "$here/uke-hall.h" \
     "$here/../../patches/boot/0001-arm64-uke-abl-dt-hook.patch" \

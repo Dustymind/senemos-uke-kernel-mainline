@@ -18,7 +18,7 @@
 #include <dt-bindings/clock/qcom,rpmh.h>
 #include <dt-bindings/clock/qcom,tcsrcc-pineapple.h>
 #include <dt-bindings/phy/phy-qcom-qmp.h>
-extern "C" int uke_abl_transform(void *, size_t, const void *, size_t, void *, size_t, void *, size_t);
+extern "C" int uke_abl_transform(void *, size_t, const void *, size_t, void *, size_t, void *, size_t, void *, size_t);
 extern "C" int uke_typec_native_fixture(void *, void *, size_t);
 using Bytes = std::vector<unsigned char>;
 constexpr size_t capacity = 2 * 1024 * 1024;
@@ -263,11 +263,11 @@ static void write_new(const char *path, const Bytes &dt) {
 }
 int main(int argc,char **argv) {
     try {
-        need(argc==7,"Usage: usb-typec-fdt-check OEM_ABL UFS USB DISPLAY BASELINE_DISPLAY NEW_OUTPUT");
+        need(argc==8,"Usage: usb-typec-fdt-check OEM_ABL UFS USB KEYBOARD DISPLAY BASELINE_DISPLAY NEW_OUTPUT");
         auto input=read_blob(argv[1]); const auto saved=input;
-        const auto ufs=read_blob(argv[2]), usb_overlay=read_blob(argv[3]), display=read_blob(argv[4]), baseline_overlay=read_blob(argv[5]);
-        auto u=ufs, s=usb_overlay; Bytes adapted(capacity);
-        const int ret=uke_abl_transform(adapted.data(),adapted.size(),input.data(),input.size(),u.data(),u.size(),s.data(),s.size());
+        const auto ufs=read_blob(argv[2]), usb_overlay=read_blob(argv[3]), keyboard=read_blob(argv[4]), display=read_blob(argv[5]), baseline_overlay=read_blob(argv[6]);
+        auto u=ufs, s=usb_overlay, k=keyboard; Bytes adapted(capacity);
+        const int ret=uke_abl_transform(adapted.data(),adapted.size(),input.data(),input.size(),u.data(),u.size(),s.data(),s.size(),k.data(),k.size());
         need(input==saved,"Actual base transform modified input"); need(ret==1,"Actual base transform rejected full profile: "+std::to_string(ret));
         const auto full=native(adapted,display), baseline=native(adapted,baseline_overlay);
         need(fdt_path_offset(baseline.data(),dp.c_str())==-FDT_ERR_NOTFOUND,"Comparison baseline unexpectedly includes native DP");
@@ -306,17 +306,17 @@ int main(int argc,char **argv) {
         }
         // Execute the actual transform's known malformed-input refusal boundaries.
         for(int fault=0;fault<3;fault++) {
-            auto bad=input, bad_u=ufs, bad_s=usb_overlay; Bytes scratch(capacity);
+            auto bad=input, bad_u=ufs, bad_s=usb_overlay, bad_k=keyboard; Bytes scratch(capacity);
             if(fault==0) {const fdt32_t board[]={cpu_to_fdt32(9),cpu_to_fdt32(0)};
                 need(!fdt_setprop(bad.data(),0,"qcom,board-id",board,sizeof(board)),"Cannot construct wrong-board input");}
             if(fault==1) {const fdt32_t reg[]={cpu_to_fdt32(0x1d84000),cpu_to_fdt32(0x1000)};
                 need(!fdt_setprop(bad.data(),node(bad,"/soc/ufshc@1d84000"),"reg",reg,sizeof(reg)),"Cannot construct wrong-UFS input");}
             if(fault==2) bad_s.resize(40);
             const auto original=bad;
-            const int rejected=uke_abl_transform(scratch.data(),scratch.size(),bad.data(),bad.size(),bad_u.data(),bad_u.size(),bad_s.data(),bad_s.size());
+            const int rejected=uke_abl_transform(scratch.data(),scratch.size(),bad.data(),bad.size(),bad_u.data(),bad_u.size(),bad_s.data(),bad_s.size(),bad_k.data(),bad_k.size());
             need(rejected<0 && bad==original,"Actual transform malformed-input boundary failed");
         }
-        write_new(argv[6],full);
+        write_new(argv[7],full);
         std::cout<<"Actual full Type-C/native FDT transform and graph passed; RAM/reservations/internal DSI preserved; host-only evidence\n";
         return 0;
     } catch(const std::exception &e) {std::cerr<<e.what()<<'\n'; return 1;}

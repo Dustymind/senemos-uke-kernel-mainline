@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Stock-ABL development path for Uke. Keep the bootloader's selected FDT,
- * RAM, reservations, selectors and unit data. Apply only the reviewed UFS
- * and USB provider overlays before OF scans or creates platform devices.
+ * RAM, reservations, selectors and unit data. Apply only the reviewed UFS,
+ * USB, light, optional video and Pogo keyboard overlays before OF scans or
+ * creates platform devices.
  * The display geometry is cross-checked against Uke's OEM O82 panel and
  * the owner's DRM mode inventory. The splash address comes from this boot.
  * This is a simplefb handoff candidate, not a panel or power-management port.
@@ -920,7 +921,8 @@ static
 int UKE_INIT uke_abl_transform(void *output, size_t capacity,
 			      const void *input, size_t input_bytes,
 			      void *ufs_overlay, size_t ufs_bytes,
-			      void *usb_overlay, size_t usb_bytes)
+			      void *usb_overlay, size_t usb_bytes,
+			      void *keyboard_overlay, size_t keyboard_bytes)
 {
 	static const char model[] = "Qualcomm Technologies, Inc. Uke based on SM8635";
 	const char *value;
@@ -942,10 +944,12 @@ int UKE_INIT uke_abl_transform(void *output, size_t capacity,
 	    uke_path_reg(input, "/soc/ufsphy_mem@1d80000", 0x1d80000, 0x2000) ||
 	    uke_reboot_cell(input) || uke_wifi_graph(input) || uke_legacy_layout(input) || uke_gpu_opps(input) ||
 	    uke_backlight_bus(input) || uke_spi_graph(input) || uke_board_pins(input) ||
-	    !ufs_overlay || !usb_overlay ||
+	    !ufs_overlay || !usb_overlay || !keyboard_overlay ||
 	    ufs_bytes < sizeof(struct fdt_header) || usb_bytes < sizeof(struct fdt_header) ||
+	    keyboard_bytes < sizeof(struct fdt_header) ||
 	    fdt_check_full(ufs_overlay, ufs_bytes) ||
-	    fdt_check_full(usb_overlay, usb_bytes))
+	    fdt_check_full(usb_overlay, usb_bytes) ||
+	    fdt_check_full(keyboard_overlay, keyboard_bytes))
 		return -FDT_ERR_BADVALUE;
 #if defined(UKE_LLCC_NATIVE_PROFILE) && UKE_LLCC_NATIVE_PROFILE
 	ret = uke_llcc_admit(input);
@@ -976,6 +980,14 @@ int UKE_INIT uke_abl_transform(void *output, size_t capacity,
 			return ret;
 	}
 #endif
+	/*
+	 * Kept outside the video block so a rejected optional display overlay
+	 * cannot remove the keyboard. The DMA provider it names is enabled by
+	 * the USB overlay above.
+	 */
+	ret = fdt_overlay_apply(output, keyboard_overlay);
+	if (ret)
+		return ret;
 #if defined(UKE_LLCC_NATIVE_PROFILE) && UKE_LLCC_NATIVE_PROFILE
 	ret = uke_llcc_apply(output);
 	if (ret)
@@ -1107,7 +1119,8 @@ void *__init uke_abl_prepare_fdt(void *input, int size, phys_addr_t *physical)
 		return input;
 	ret = uke_abl_transform(uke_fdt, sizeof(uke_fdt), input, size,
 			      uke_ufs_overlay, sizeof(uke_ufs_overlay),
-			      uke_usb_overlay, sizeof(uke_usb_overlay));
+			      uke_usb_overlay, sizeof(uke_usb_overlay),
+			      uke_keyboard_overlay, sizeof(uke_keyboard_overlay));
 	if (ret < 0) {
 		pr_crit("Uke ABL DT adaptation rejected (%d); refusing incomplete board graph\n", ret);
 		while (true)

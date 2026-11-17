@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 extern "C" int uke_abl_transform(void *, size_t, const void *, size_t,
-                                 void *, size_t, void *, size_t);
+                                 void *, size_t, void *, size_t, void *, size_t);
 using Bytes = std::vector<unsigned char>;
 static Bytes read_blob(const char *path) {
     const int fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
@@ -123,12 +123,13 @@ static void check_adreno732(const Bytes &dt) {
 }
 int main(int argc, char **argv) {
     try {
-        if (argc != 5) throw std::runtime_error("Usage: abl-dt-check INPUT UFS USB NEW_OUTPUT");
+        if (argc != 6) throw std::runtime_error("Usage: abl-dt-check INPUT UFS USB KEYBOARD NEW_OUTPUT");
         auto input = read_blob(argv[1]), saved = input;
-        auto ufs = read_blob(argv[2]), usb = read_blob(argv[3]);
+        auto ufs = read_blob(argv[2]), usb = read_blob(argv[3]), keyboard = read_blob(argv[4]);
         Bytes output(2*1024*1024);
         const int result = uke_abl_transform(output.data(), output.size(), input.data(), input.size(),
-                                            ufs.data(), ufs.size(), usb.data(), usb.size());
+                                            ufs.data(), ufs.size(), usb.data(), usb.size(),
+                                            keyboard.data(), keyboard.size());
         if (input != saved) throw std::runtime_error("Original FDT modified");
         if (!result) { std::cout << "Foreign DT unchanged\n"; return 3; }
         if (result != 1) throw std::runtime_error("DT admission rejected: " + std::to_string(result));
@@ -180,7 +181,7 @@ int main(int argc, char **argv) {
         }
         if (fdt_num_mem_rsv(input.data()) != fdt_num_mem_rsv(output.data()))
             throw std::runtime_error("FDT reserve count changed");
-        const int fd = open(argv[4], O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+        const int fd = open(argv[5], O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
         if (fd < 0) throw std::runtime_error("Output must be new");
         output.resize(fdt_totalsize(output.data()));
         size_t done = 0;

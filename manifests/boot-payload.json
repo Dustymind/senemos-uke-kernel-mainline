@@ -489,11 +489,11 @@
     },
     {
       "path": "src/boot/prepare-abl-source.sh",
-      "sha256": "c9052898a129051aa15f20188b4ea8d75346e2fb9d61ee53e091498a481c72b2"
+      "sha256": "76712bd2f8654ddf383bea4055bdd9bc2cb7cfe7cf2c84992d3b3ca16c8d76e2"
     },
     {
       "path": "src/boot/uke-abl.c",
-      "sha256": "1e2abd818c4254e433037e88bfccadfb91b045ffb95d504a0818a7b68deba992"
+      "sha256": "e7a5c76d4100bea9600d14c56d2c010495e177cde9751fbe6849640c32b165a4"
     },
     {
       "path": "src/boot/uke-bwmon.h",
@@ -553,7 +553,7 @@
     },
     {
       "path": "src/display/sm7675-uke-native-display-oem-modes.dtso",
-      "sha256": "821cabda157872e700a026e61aa46f0d818f673b9852c360973a44f96dc397e1"
+      "sha256": "a9e7e1c226346ecb3c14c4bf3883fb4ca2de7427f0a474710d0e488e2b323005"
     },
     {
       "path": "src/display/uke-abl-native.h",
@@ -993,7 +993,7 @@
     },
     {
       "path": "tests/usb-typec-fdt-check.cpp",
-      "sha256": "68e325e38739ebce77a9f73fa0ce8aef63de562367d2423eb8d563560779b1f3"
+      "sha256": "2019e8d299cef228cd10497472102b59e979500b9c626c139702f22de12cae49"
     },
     {
       "path": "tests/usbss-kconfig-contract.sh",
