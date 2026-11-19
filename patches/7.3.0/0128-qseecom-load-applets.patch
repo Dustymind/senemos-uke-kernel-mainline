@@ -1,0 +1,192 @@
+diff --git a/drivers/firmware/qcom/qcom_qseecom.c b/drivers/firmware/qcom/qcom_qseecom.c
+index 320ec2a77..c53e428b1 100644
+--- a/drivers/firmware/qcom/qcom_qseecom.c
++++ b/drivers/firmware/qcom/qcom_qseecom.c
+@@ -17,6 +17,14 @@
+ struct qseecom_app_desc {
+ 	const char *app_name;
+ 	const char *dev_name;
++	/*
++	 * Some applets are not resident until a client asks for them.  When
++	 * @load is set the client is created by loading the applet instead of
++	 * only looking it up, and @sb_size is handed to TZ as the shared
++	 * buffer the applet expects.
++	 */
++	bool load;
++	size_t sb_size;
+ };
+ 
+ static void qseecom_client_release(struct device *dev)
+@@ -44,8 +52,22 @@ static int qseecom_client_register(struct platform_device *qseecom_dev,
+ 
+ 	/* Try to find the app ID, skip device if not found */
+ 	ret = qcom_scm_qseecom_app_get_id(desc->app_name, &app_id);
++	if (ret == -ENOENT && desc->load) {
++		/*
++		 * Not resident.  The vendor stack loads applets on demand and
++		 * the Xiaomi "devauth" applet - which signs the Pogo keyboard
++		 * auth token - is only ever loaded this way.
++		 */
++		ret = qcom_scm_qseecom_app_load(desc->app_name, desc->sb_size,
++						&app_id);
++		if (ret)
++			dev_err(&qseecom_dev->dev,
++				"failed to load %s: %d\n", desc->app_name, ret);
++	} else if (ret == -ENOENT) {
++		return 0;
++	}
+ 	if (ret)
+-		return ret == -ENOENT ? 0 : ret;
++		return ret;
+ 
+ 	dev_info(&qseecom_dev->dev, "setting up client for %s\n", desc->app_name);
+ 
+@@ -85,6 +107,11 @@ static int qseecom_client_register(struct platform_device *qseecom_dev,
+  */
+ static const struct qseecom_app_desc qcom_qseecom_apps[] = {
+ 	{ "qcom.tz.uefisecapp", "uefisecapp" },
++	/*
++	 * 0x2080 is the shared-buffer size libmidevauth.so passes to
++	 * QSEECom_start_app() for this applet (run_cmd @ 0x1042f0).
++	 */
++	{ "devauth", "devauth", true, 0x2080 },
+ };
+ 
+ static int qcom_qseecom_probe(struct platform_device *qseecom_dev)
+diff --git a/drivers/firmware/qcom/qcom_scm.c b/drivers/firmware/qcom/qcom_scm.c
+index 3eaa4c9cc..7570d6ee6 100644
+--- a/drivers/firmware/qcom/qcom_scm.c
++++ b/drivers/firmware/qcom/qcom_scm.c
+@@ -115,6 +115,7 @@ enum qcom_scm_qseecom_tz_svc {
+ };
+ 
+ enum qcom_scm_qseecom_tz_cmd_app {
++	QSEECOM_TZ_CMD_APP_LOAD			= 2,
+ 	QSEECOM_TZ_CMD_APP_SEND			= 1,
+ 	QSEECOM_TZ_CMD_APP_LOOKUP		= 3,
+ };
+@@ -2186,6 +2187,87 @@ static int qcom_scm_qseecom_get_version(u32 *version)
+ 	return 0;
+ }
+ 
++/**
++ * qcom_scm_qseecom_app_load() - Load a QSEE app and return its ID.
++ * @app_name: Name of the app to load.
++ * @sb_size:  Size of the shared buffer the app expects.
++ * @app_id:   Loaded app ID, set on success.
++ *
++ * The mainline QSEECOM support only looks up applets that TZ already holds.
++ * The stock vendor stack loads them on demand instead, and the Xiaomi
++ * ``devauth`` applet - which signs the Pogo keyboard auth token - is not
++ * resident until it is asked for.  This mirrors QSEECom_start_app()'s load
++ * half so a caller can bring an applet in and then talk to it with
++ * qcom_scm_qseecom_app_send().
++ *
++ * The command ID is the one gap in enum qcom_scm_qseecom_tz_cmd_app; if TZ
++ * disagrees the return value is logged so the next boot can correct it.
++ *
++ * Return: 0 on success, negative errno otherwise.
++ */
++int qcom_scm_qseecom_app_load(const char *app_name, size_t sb_size, u32 *app_id)
++{
++	unsigned long name_buf_size = QSEECOM_MAX_APP_NAME_SIZE;
++	unsigned long app_name_len = strlen(app_name);
++	struct qcom_scm_desc desc = {};
++	struct qcom_scm_qseecom_resp res = {};
++	int status;
++
++	if (app_name_len >= name_buf_size)
++		return -EINVAL;
++
++	char *name_buf __free(qcom_tzmem) = qcom_tzmem_alloc(__scm->mempool,
++							     name_buf_size,
++							     GFP_KERNEL);
++	if (!name_buf)
++		return -ENOMEM;
++
++	memcpy(name_buf, app_name, app_name_len);
++
++	desc.owner = QSEECOM_TZ_OWNER_QSEE_OS;
++	desc.svc = QSEECOM_TZ_SVC_APP_MGR;
++	desc.cmd = QSEECOM_TZ_CMD_APP_LOAD;
++	desc.arginfo = QCOM_SCM_ARGS(3, QCOM_SCM_RW, QCOM_SCM_VAL, QCOM_SCM_VAL);
++	desc.args[0] = qcom_tzmem_to_phys(name_buf);
++	desc.args[1] = app_name_len;
++	desc.args[2] = sb_size;
++
++	status = qcom_scm_qseecom_call(&desc, &res);
++
++	if (status) {
++		dev_err(__scm->dev,
++			"qseecom load %s: scm call failed %d\n", app_name, status);
++		return status;
++	}
++
++	if (res.result == QSEECOM_RESULT_FAILURE) {
++		dev_err(__scm->dev,
++			"qseecom load %s: TZ refused (result=%#llx resp_type=%#llx data=%#llx)\n",
++			app_name, res.result, res.resp_type, res.data);
++		return -EIO;
++	}
++
++	if (res.result != QSEECOM_RESULT_SUCCESS) {
++		dev_err(__scm->dev,
++			"qseecom load %s: unexpected result %#llx (resp_type=%#llx data=%#llx)\n",
++			app_name, res.result, res.resp_type, res.data);
++		return -EINVAL;
++	}
++
++	if (res.resp_type != QSEECOM_SCM_RES_APP_ID) {
++		dev_err(__scm->dev,
++			"qseecom load %s: unexpected resp_type %#llx (data=%#llx)\n",
++			app_name, res.resp_type, res.data);
++		return -EINVAL;
++	}
++
++	if (app_id)
++		*app_id = res.data;
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(qcom_scm_qseecom_app_load);
++
+ /**
+  * qcom_scm_qseecom_app_get_id() - Query the app ID for a given QSEE app name.
+  * @app_name: The name of the app.
+@@ -2335,6 +2417,12 @@ static const struct of_device_id qcom_scm_qseecom_allowlist[] __maybe_unused = {
+ 	{ .compatible = "qcom,x1e80100-crd" },
+ 	{ .compatible = "qcom,x1e80100-qcp" },
+ 	{ .compatible = "qcom,x1p42100-crd" },
++	/*
++	 * Xiaomi Pad 7 / POCO Pad X1 (uke, SM7675).  The keyboard MCU auth
++	 * applet is only reachable through QSEECOM, and the tablet ships the
++	 * same QTEE image the allowlisted devices do.
++	 */
++	{ .compatible = "xiaomi,uke" },
+ 	{ }
+ };
+ 
+diff --git a/include/linux/firmware/qcom/qcom_scm.h b/include/linux/firmware/qcom/qcom_scm.h
+index 5747bd191..d298f2d71 100644
+--- a/include/linux/firmware/qcom/qcom_scm.h
++++ b/include/linux/firmware/qcom/qcom_scm.h
+@@ -169,12 +169,19 @@ int qcom_scm_shm_bridge_delete(u64 handle);
+ 
+ #ifdef CONFIG_QCOM_QSEECOM
+ 
++int qcom_scm_qseecom_app_load(const char *app_name, size_t sb_size, u32 *app_id);
+ int qcom_scm_qseecom_app_get_id(const char *app_name, u32 *app_id);
+ int qcom_scm_qseecom_app_send(u32 app_id, void *req, size_t req_size,
+ 			      void *rsp, size_t rsp_size);
+ 
+ #else /* CONFIG_QCOM_QSEECOM */
+ 
++static inline int qcom_scm_qseecom_app_load(const char *app_name,
++						 size_t sb_size, u32 *app_id)
++{
++	return -EINVAL;
++}
++
+ static inline int qcom_scm_qseecom_app_get_id(const char *app_name, u32 *app_id)
+ {
+ 	return -EINVAL;

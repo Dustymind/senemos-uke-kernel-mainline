@@ -33,6 +33,25 @@
 /* Register byte of the bootloader commands */
 #define WN8030_BL_REG 0x5c
 
+/*
+ * Answer the MCU MiAuth handshake.  Off by default: the token comes from an
+ * Android AIDL HAL, so on Linux there is nothing to answer with, and a partial
+ * or zero answer makes the MCU stop scanning keys a few minutes later.
+ */
+static bool mi_auth;
+module_param(mi_auth, bool, 0444);
+MODULE_PARM_DESC(mi_auth,
+		 "Answer the MCU MiAuth handshake; needs a token provider (default: off)");
+
+/*
+ * Dump every frame the MCU sends, plus every report id the dispatcher does not
+ * recognise.  Writable at run time so a live system can be traced without a
+ * reload:  echo 1 > /sys/module/hid_nanosic_wn8030/parameters/trace
+ */
+static bool trace;
+module_param(trace, bool, 0644);
+MODULE_PARM_DESC(trace, "Log raw MCU frames and unrecognised report ids");
+
 /**
  * struct nanosic_wn8030_variant - per-device integration of the WN8030
  * @kbd_rdesc: report descriptor of the keyboard HID device
@@ -116,6 +135,13 @@ struct nanosic_wn8030 {
 	bool auth_open;
 	bool auth_request_pending;
 	u8 auth_uid[16];
+	/*
+	 * The token provider signs uid plus keyMeta plus challenge, and keyMeta
+	 * comes from the MCU in the 0x31 report.  It used to stay a local in the
+	 * handler, so userspace could never pass it on and every request was
+	 * missing one of its three inputs.
+	 */
+	u8 auth_key_meta[4];
 	u8 auth_challenge[16];
 	u8 auth_token[16];
 };
@@ -1051,14 +1077,26 @@ static void nanosic_wn8030_handle_vendor(struct nanosic_wn8030 *nanosic,
 				       KOBJ_CHANGE);
 		}
 	}
-	/* WN8012(KB) -> HOST, kb auth */
-	/* 0x0/0x1 - init auth, 0x64 - repeat request auth */
-	else if (p[4] == 0x24) {
+	/*
+	 * WN8012(KB) -> HOST, kb auth
+	 * 0x0/0x1 - init auth, 0x64 - repeat request auth
+	 *
+	 * The OEM nanosic_driver.ko has no MiAuth path: it hands the request to
+	 * /dev/nanodev0 and the Android AIDL HAL
+	 * (vendor.xiaomi.hardware.keyboardnanoapp_aidl-service) answers with a
+	 * token derived from a vendor key we cannot reach from Linux.  Any
+	 * partial answer we send - "MIAUTH", s3t1, or a zero token - starts a
+	 * challenge the MCU never accepts, and a few minutes later it stops
+	 * scanning keys while it keeps streaming the accelerometer.  That is the
+	 * "works, then goes silent" symptom.  Stay out of the handshake unless a
+	 * token provider is explicitly wired up.
+	 */
+	else if (p[4] == 0x24 && mi_auth) {
 		if (len < 7 || p[6] == 0x01 || p[6] == 0x64)
 			nanosic_wn8030_xm_auth_init(nanosic);
 	}
 	/* WN8012(KB) -> HOST, kb auth init */
-	else if (p[4] == 0x31 && len >= 32) {
+	else if (p[4] == 0x31 && len >= 32 && mi_auth) {
 		u8 key_meta[4] = { 0x00, 0x00, 0x00, 0x02 };
 		u8 challenge[16];
 
@@ -1067,11 +1105,13 @@ static void nanosic_wn8030_handle_vendor(struct nanosic_wn8030 *nanosic,
 
 		reinit_completion(&nanosic->auth_token_ready);
 		memcpy(nanosic->auth_uid, &p[8], 16);
+		memcpy(nanosic->auth_key_meta, key_meta,
+		       sizeof(nanosic->auth_key_meta));
 
 		nanosic_wn8030_xm_auth_s3t1(nanosic, key_meta, challenge);
 	}
 	/* WN8012(KB) -> HOST, kb auth s3t1 */
-	else if (p[4] == 0x32 && len >= 38) {
+	else if (p[4] == 0x32 && len >= 38 && mi_auth) {
 		memcpy(nanosic->auth_challenge, &p[22], 16);
 		nanosic->auth_request_pending = true;
 		wake_up_interruptible(&nanosic->auth_read_wq);
@@ -1133,15 +1173,28 @@ static int nanosic_wn8030_dispatch(struct nanosic_wn8030 *nanosic,
 		size = len;
 		break;
 	default:
+		if (READ_ONCE(trace))
+			dev_info(nanosic->dev, "unknown report id %02x\n", p[0]);
 		return 0;
 	}
 
-	if (size > len)
+	if (size > len) {
+		if (READ_ONCE(trace))
+			dev_info(nanosic->dev,
+				 "short report id %02x size %d len %d\n",
+				 p[0], size, len);
 		return 0;
+	}
 
 	switch (p[0]) {
 	case 0x2:
-		if (READ_ONCE(nanosic->input_enabled) && nanosic->hid_keyboard)
+		if (!READ_ONCE(nanosic->input_enabled))
+			dev_info_ratelimited(nanosic->dev,
+					     "keyboard report dropped: input disabled\n");
+		else if (!nanosic->hid_keyboard)
+			dev_info_ratelimited(nanosic->dev,
+					     "keyboard report dropped: no hid device\n");
+		else
 			hid_input_report(nanosic->hid_keyboard, HID_INPUT_REPORT,
 					 (u8 *)p, size, 0);
 		break;
@@ -1214,8 +1267,12 @@ static irqreturn_t nanosic_wn8030_handler(int irq, void *data)
 	}
 
 	/* Bad data */
-	if (buf[0] != 0x57 || buf[2] == 0x0)
+	if (buf[0] != 0x57 || buf[2] == 0x0) {
+		dev_warn_ratelimited(nanosic->dev,
+				     "discarding frame hdr=%02x ctx=%02x len=%02x\n",
+				     buf[0], buf[2], buf[3]);
 		return IRQ_HANDLED;
+	}
 
 	off = 3;
 	do {
@@ -1224,7 +1281,9 @@ static irqreturn_t nanosic_wn8030_handler(int irq, void *data)
 		off += size;
 	} while (nanosic->variant->packed_reports && size && off < sizeof(buf));
 
-	//print_hex_dump(KERN_INFO, "", DUMP_PREFIX_OFFSET, 16, 1, buf, sizeof(buf), false);
+	if (READ_ONCE(trace))
+		print_hex_dump(KERN_INFO, "nanosic rx: ", DUMP_PREFIX_OFFSET,
+			       16, 1, buf, sizeof(buf), false);
 
 	return IRQ_HANDLED;
 }
@@ -1517,6 +1576,13 @@ static void nanosic_wn8030_input_state_work(struct work_struct *work)
 	caps_led = READ_ONCE(nanosic->capslock_enabled) ? 0xFD : 0xFC;
 	micmute_led = READ_ONCE(nanosic->micmute_led.brightness) ? 0xF7 : 0xF3;
 	if (enable != READ_ONCE(nanosic->input_enabled)) {
+		dev_info(nanosic->dev,
+			 "HID input %s (angle=%d lid=%d tablet=%d attached=%d)\n",
+			 enable ? "enabled" : "disabled",
+			 READ_ONCE(nanosic->userspace_angle_enabled),
+			 READ_ONCE(nanosic->lid_closed),
+			 READ_ONCE(nanosic->tablet_mode),
+			 READ_ONCE(nanosic->keyboard_attached));
 		WRITE_ONCE(nanosic->input_enabled, enable);
 		if (!enable)
 			nanosic_wn8030_release_inputs(nanosic);
@@ -1736,6 +1802,7 @@ static const struct file_operations nanosic_hinge_fops = {
 
 struct nanosic_auth_req {
 	u8 uid[16];
+	u8 key_meta[4];
 	u8 challenge[16];
 };
 
@@ -1775,6 +1842,7 @@ static ssize_t nanosic_auth_read(struct file *file, char __user *buf,
 		return ret;
 
 	memcpy(req.uid, nanosic->auth_uid, sizeof(req.uid));
+	memcpy(req.key_meta, nanosic->auth_key_meta, sizeof(req.key_meta));
 	memcpy(req.challenge, nanosic->auth_challenge, sizeof(req.challenge));
 	nanosic->auth_request_pending = false;
 

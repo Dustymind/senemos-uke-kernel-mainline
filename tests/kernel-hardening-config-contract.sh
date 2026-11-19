@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 config=${1:?Pass the resolved kernel configuration}
 for symbol in SYSTEM_TRUSTED_KEYRING SECURITY_DMESG_RESTRICT \
-    SECURITY_LOCKDOWN_LSM SECURITY_LOCKDOWN_LSM_EARLY LOCK_DOWN_KERNEL_FORCE_INTEGRITY \
+    SECURITY_LOCKDOWN_LSM SECURITY_LOCKDOWN_LSM_EARLY \
     SECURITY_YAMA SECURITY_SELINUX FORTIFY_SOURCE HARDENED_USERCOPY \
     RANDOMIZE_BASE STACKPROTECTOR_STRONG STRICT_KERNEL_RWX STRICT_MODULE_RWX; do
     grep -Fxq "CONFIG_${symbol}=y" "$config" || {
@@ -12,6 +12,13 @@ for symbol in SYSTEM_TRUSTED_KEYRING SECURITY_DMESG_RESTRICT \
 done
 grep -Fxq '# CONFIG_MODULE_SIG_FORCE is not set' "$config" || {
     echo 'MODULE_SIG_FORCE unexpectedly enabled' >&2
+    exit 1
+}
+# Lockdown is present but not forced.  Forcing integrity would reject every
+# unsigned module, including the locally built test modules an installed system
+# has to be able to load.
+grep -Fxq '# CONFIG_LOCK_DOWN_KERNEL_FORCE_INTEGRITY is not set' "$config" || {
+    echo 'LOCK_DOWN_KERNEL_FORCE_INTEGRITY unexpectedly enabled' >&2
     exit 1
 }
 grep -Fxq 'CONFIG_SYSTEM_TRUSTED_KEYS=""' "$config" || {

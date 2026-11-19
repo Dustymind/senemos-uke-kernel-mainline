@@ -4,7 +4,7 @@ SHELL := /bin/bash
 .PHONY: validate srpm test-touch-protocol test-touch-transport test-touch-dt
 version := 7.3.1
 patch_series := 7.3.0
-patch_count := 127
+patch_count := 128
 outdir ?= $(CURDIR)/build/srpm
 .PHONY: refresh-pins check-pins require-unstable-series
 refresh-pins:
@@ -170,7 +170,11 @@ srpm: validate
 	cp "$$cache/linux-$(version).tar."{xz,sign} configs/keys/linux-stable.asc "$$top/SOURCES/"
 	assets="$$(mktemp -d "$$top/profile.XXXXXX")/native-profile"
 	mkdir -p "$$assets"
-	git archive HEAD src patches manifests/video-linux73-candidate-20261025.json tests | tar -xf - -C "$$assets"
+	git archive HEAD src patches manifests/video-linux73-candidate-20261025.json | tar -xf - -C "$$assets"
+	# The tests come from the worktree, not from HEAD: the source RPM stages
+	# the contract scripts the build will actually run, and a working-tree fix
+	# that git archive cannot see would otherwise be silently skipped.
+	cp -a tests "$$assets/tests"
 	install -m644 packaging/native/native.config packaging/native/README.md packaging/native/usb-profile packaging/native/audio-profile packaging/native/llcc-profile "$$assets/"
 	install -m644 manifests/*parent-files.sha256 "$$assets/"
 	install -m755 packaging/native/prepare.sh "$$assets/"
