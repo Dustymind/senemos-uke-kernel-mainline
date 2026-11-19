@@ -38,6 +38,38 @@
  * Android AIDL HAL, so on Linux there is nothing to answer with, and a partial
  * or zero answer makes the MCU stop scanning keys a few minutes later.
  */
+/*
+ * The OEM kernel driver formats exactly three frames: 0xA1 (hall status, sysfs
+ * only), 0x30 (keypad state, factory self-test) and 0x25 (keyboard power).
+ *
+ * Backlight is not one of them, but 0x23 is still a real command: the Android
+ * AIDL client carries the literal frame 32 00 4e 31 80 38 23 01 5b b6 (91 %) and
+ * sends it through the service to the chardev.  So the MCU does accept it; it
+ * is just driven from userspace on the touchpad SKU, which is the only one with
+ * a backlight.
+ *
+ * Touchpad-enable (0x21) is different: it appears nowhere in the ROM, in the
+ * driver or in any userspace binary.  The OEM driver registers a "Xiaomi Touch"
+ * HID device unconditionally on every unit and never tells the MCU to enable
+ * anything, so the touchpad SKU must report on its own.
+ *
+ * Both are switchable while we work out what makes the keyboard stop scanning a
+ * minute after boot, but they are not equally likely culprits: 0x21 is
+ * unobserved on real hardware, 0x23 is observed.
+ *
+ * The Caps Lock lamp is neither: it goes out as 0x2E, which no OEM component
+ * sends either but is the only lamp this hardware has.
+ */
+static bool touchpad_cmd = true;
+module_param(touchpad_cmd, bool, 0644);
+MODULE_PARM_DESC(touchpad_cmd,
+		 "Send the MCU touchpad-enable command (default: on)");
+
+static bool backlight_cmd = true;
+module_param(backlight_cmd, bool, 0644);
+MODULE_PARM_DESC(backlight_cmd,
+		 "Send the MCU backlight command (default: on)");
+
 static bool mi_auth;
 module_param(mi_auth, bool, 0444);
 MODULE_PARM_DESC(mi_auth,
@@ -710,6 +742,9 @@ static int nanosic_wn8030_set_kbd_backlight(struct nanosic_wn8030 *nanosic,
 	u8 buf[XM_WN8030_I2C_WRITE] = { 0x32, 0x00, 0x4E, 0x31,
 					0x80, 0x38, 0x23, 0x01 };
 
+	if (!READ_ONCE(backlight_cmd))
+		return 0;
+
 	buf[8] = brightness;
 	buf[9] = nanosic_wn8030_checksum8(&buf[2], 7);
 
@@ -797,6 +832,9 @@ static int nanosic_wn8030_set_touchpad(struct nanosic_wn8030 *nanosic, bool enab
 {
 	u8 buf[XM_WN8030_I2C_WRITE] = { 0x32, 0x00, 0x4E, 0x31,
 					0x80, 0x38, 0x21, 0x01 };
+
+	if (!READ_ONCE(touchpad_cmd))
+		return 0;
 
 	buf[8] = enable;
 	buf[9] = nanosic_wn8030_checksum8(&buf[2], 7);
@@ -1535,6 +1573,72 @@ static void nanosic_wn8030_power_off(struct nanosic_wn8030 *nanosic)
 	regulator_disable(nanosic->supplies[0].consumer);
 }
 
+/*
+ * Restart the MCU without cutting its supplies.
+ *
+ * The MiAuth window closes on its own and the host has no token to answer with,
+ * so the window has to be reset.  A full driver rebind does that by running
+ * power_off() and power_on(), which disables both regulators, waits for the
+ * rails to drain and charges them again - around a second during which the
+ * keyboard is deaf.
+ *
+ * A reset pulse alone reaches the same state in about a seventieth of that: the
+ * MCU restarts its firmware, the window is armed again, and the rails never
+ * move.  What it does not do is re-run probe, so anything the driver derived
+ * from the MCU has to be refreshed here - the keyboard HID device stays
+ * registered and key reports keep flowing once the MCU is back.
+ */
+static void nanosic_wn8030_soft_reset(struct nanosic_wn8030 *nanosic)
+{
+	const struct nanosic_wn8030_variant *variant = nanosic->variant;
+
+	if (READ_ONCE(nanosic->suspended))
+		return;
+
+	gpiod_set_value_cansleep(nanosic->reset_gpio, 1);
+	msleep(variant->reset_ms ?: 2);
+	gpiod_set_value_cansleep(nanosic->reset_gpio, 0);
+	msleep(variant->boot_ms);
+	if (variant->wake_ms)
+		msleep(variant->wake_ms);
+
+	/* The MCU comes back with its own defaults; restore what we had set. */
+	nanosic_wn8030_set_kb_power(nanosic, true);
+	if (READ_ONCE(nanosic->keyboard_attached)) {
+		bool input_enabled = READ_ONCE(nanosic->input_enabled);
+
+		nanosic_wn8030_set_touchpad(nanosic, input_enabled);
+		nanosic_wn8030_set_caps_led(nanosic,
+					    READ_ONCE(nanosic->capslock_enabled));
+		schedule_delayed_work(&nanosic->wake_worker,
+				      msecs_to_jiffies(12000));
+	}
+}
+
+/*
+ * sysfs knob for the userspace helper: writing "1" pulses reset, which re-arms
+ * the auth window at a fraction of the cost of a rebind.
+ */
+static ssize_t soft_reset_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct nanosic_wn8030 *nanosic = dev_get_drvdata(dev);
+	bool value;
+
+	if (kstrtobool(buf, &value))
+		return -EINVAL;
+	if (!value)
+		return count;
+
+	mutex_lock(&nanosic->conn_mutex);
+	nanosic_wn8030_soft_reset(nanosic);
+	mutex_unlock(&nanosic->conn_mutex);
+
+	return count;
+}
+static DEVICE_ATTR_WO(soft_reset);
+
 static void nanosic_wn8030_wake_worker(struct work_struct *data)
 {
 	struct nanosic_wn8030 *nanosic =
@@ -2012,13 +2116,25 @@ static int nanosic_wn8030_probe(struct i2c_client *client)
 	if (ret)
 		goto err_misc;
 
-	nanosic->kbd_backlight_led.name = "nanosic::kbd_backlight";
-	nanosic->kbd_backlight_led.max_brightness = 100;
-	nanosic->kbd_backlight_led.brightness_set_blocking =
-		nanosic_wn8030_kbd_backlight_set;
-	ret = devm_led_classdev_register(nanosic->dev, &nanosic->kbd_backlight_led);
+	/*
+	 * With the backlight command off there is nothing to drive, and
+	 * registering the LED anyway would leave systemd-backlight writing a
+	 * brightness at every boot for a lamp that is not there.
+	 */
+	if (backlight_cmd) {
+		nanosic->kbd_backlight_led.name = "nanosic::kbd_backlight";
+		nanosic->kbd_backlight_led.max_brightness = 100;
+		nanosic->kbd_backlight_led.brightness_set_blocking =
+			nanosic_wn8030_kbd_backlight_set;
+		ret = devm_led_classdev_register(nanosic->dev,
+						 &nanosic->kbd_backlight_led);
+		if (ret)
+			goto err_micmute_led;
+	}
+
+	ret = device_create_file(nanosic->dev, &dev_attr_soft_reset);
 	if (ret)
-		goto err_micmute_led;
+		goto err_kbd_backlight_led;
 
 	ret = input_register_handler(&nanosic->hall_handler);
 	if (ret) {
@@ -2040,8 +2156,12 @@ static int nanosic_wn8030_probe(struct i2c_client *client)
 err_input:
 	input_unregister_handler(&nanosic->hall_handler);
 	cancel_work_sync(&nanosic->input_state_work);
+err_soft_reset:
+	device_remove_file(nanosic->dev, &dev_attr_soft_reset);
 err_kbd_backlight_led:
-	devm_led_classdev_unregister(nanosic->dev, &nanosic->kbd_backlight_led);
+	if (backlight_cmd)
+		devm_led_classdev_unregister(nanosic->dev,
+					     &nanosic->kbd_backlight_led);
 err_micmute_led:
 	devm_led_classdev_unregister(nanosic->dev, &nanosic->micmute_led);
 err_misc:
@@ -2058,7 +2178,10 @@ static void nanosic_wn8030_remove(struct i2c_client *client)
 {
 	struct nanosic_wn8030 *nanosic = i2c_get_clientdata(client);
 
-	devm_led_classdev_unregister(nanosic->dev, &nanosic->kbd_backlight_led);
+	device_remove_file(nanosic->dev, &dev_attr_soft_reset);
+	if (backlight_cmd)
+		devm_led_classdev_unregister(nanosic->dev,
+					     &nanosic->kbd_backlight_led);
 	devm_led_classdev_unregister(nanosic->dev, &nanosic->micmute_led);
 	input_unregister_handler(&nanosic->hall_handler);
 	cancel_work_sync(&nanosic->input_state_work);
