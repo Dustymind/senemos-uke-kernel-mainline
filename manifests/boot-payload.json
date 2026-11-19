@@ -305,7 +305,7 @@
     },
     {
       "path": "src/audio/desktop/array-ucm2/Speaker-HiFi.conf",
-      "sha256": "7c49434779fd2c00b1ad25d4459fe2bef80521ece3871ae20a58152b524b9461"
+      "sha256": "1d9bb5555d6b1b9e58a1e4be8a64bb9249a635c6c4bdc7786ac18054b75f1744"
     },
     {
       "path": "src/audio/desktop/array-ucm2/Speaker-PCM.conf",
@@ -345,7 +345,7 @@
     },
     {
       "path": "src/audio/desktop/legacy-ucm2/Speaker-HiFi.conf",
-      "sha256": "9393b19923ded796fd54d638a3dc355148049ea2912b235716ef8b035aa5cce5"
+      "sha256": "4d471fc356d8f4480da1c8902f561c69436f14c7c4c3b7b6a595767e1137149e"
     },
     {
       "path": "src/audio/desktop/legacy-ucm2/Speaker-PCM.conf",
@@ -493,7 +493,7 @@
     },
     {
       "path": "src/boot/uke-abl.c",
-      "sha256": "e7a5c76d4100bea9600d14c56d2c010495e177cde9751fbe6849640c32b165a4"
+      "sha256": "6af8bc60aa4602a5820181d2b47b8e9daebbe0ce0d29b0fba277216e49e94ec1"
     },
     {
       "path": "src/boot/uke-bwmon.h",
@@ -737,7 +737,7 @@
     },
     {
       "path": "tests/kernel-hardening-config-contract.sh",
-      "sha256": "9f2c04c8df5fcf77501bf175473c76940b3207a9b64d0a20287b71fce4c18a6b"
+      "sha256": "bd16b3e9a430a26cf73f990bb48bc0c0238f2bd1039ddea1687e2a631a4f1823"
     },
     {
       "path": "tests/l3-provider-contract.sh",
@@ -769,7 +769,7 @@
     },
     {
       "path": "tests/mainline-package-contract.sh",
-      "sha256": "a1dfddf7c1398997c4f3d78ccf5911a30c91cb17d925150ebd5e4e1fd1e20338"
+      "sha256": "020d22fce08bbe6387ef82c610f09cadc90d5eee19eca90d4da401475d93de5e"
     },
     {
       "path": "tests/mdt-memory-admission-contract.sh",
