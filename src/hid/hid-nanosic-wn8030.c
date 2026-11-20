@@ -1582,18 +1582,20 @@ static void nanosic_wn8030_power_off(struct nanosic_wn8030 *nanosic)
  * rails to drain and charges them again - around a second during which the
  * keyboard is deaf.
  *
- * A reset pulse alone reaches the same state in about a seventieth of that: the
- * MCU restarts its firmware, the window is armed again, and the rails never
- * move.  What it does not do is re-run probe, so anything the driver derived
- * from the MCU has to be refreshed here - the keyboard HID device stays
- * registered and key reports keep flowing once the MCU is back.
+ * A reset pulse alone keeps the rails where they are and does not re-run probe:
+ * the keyboard HID device stays registered, so key reports keep flowing once
+ * the MCU is back.  What it does have in common with power_on() is that the
+ * pulse drops the chip into its bootrom, and the firmware lives in RAM - so the
+ * download has to be repeated here.  Without it the MCU sits in the bootloader
+ * for good, the write still succeeds, and the keyboard is silent from then on.
  */
-static void nanosic_wn8030_soft_reset(struct nanosic_wn8030 *nanosic)
+static int nanosic_wn8030_soft_reset(struct nanosic_wn8030 *nanosic)
 {
 	const struct nanosic_wn8030_variant *variant = nanosic->variant;
+	int ret;
 
 	if (READ_ONCE(nanosic->suspended))
-		return;
+		return -EBUSY;
 
 	gpiod_set_value_cansleep(nanosic->reset_gpio, 1);
 	msleep(variant->reset_ms ?: 2);
@@ -1601,6 +1603,14 @@ static void nanosic_wn8030_soft_reset(struct nanosic_wn8030 *nanosic)
 	msleep(variant->boot_ms);
 	if (variant->wake_ms)
 		msleep(variant->wake_ms);
+
+	/* Same sequence as probe: bootrom, header, code, verify, boot. */
+	ret = nanosic_wn8030_load_fw(nanosic);
+	if (ret) {
+		dev_err(nanosic->dev, "failed to reload firmware after reset %d\n",
+			ret);
+		return ret;
+	}
 
 	/* The MCU comes back with its own defaults; restore what we had set. */
 	nanosic_wn8030_set_kb_power(nanosic, true);
@@ -1613,11 +1623,17 @@ static void nanosic_wn8030_soft_reset(struct nanosic_wn8030 *nanosic)
 		schedule_delayed_work(&nanosic->wake_worker,
 				      msecs_to_jiffies(12000));
 	}
+
+	return 0;
 }
 
 /*
  * sysfs knob for the userspace helper: writing "1" pulses reset, which re-arms
- * the auth window at a fraction of the cost of a rebind.
+ * the auth window without moving the rails.
+ *
+ * The helper falls back to a rebind when this returns an error, so an error has
+ * to be an error: -EBUSY leaves a suspended chip for the rebind path to bring
+ * back, and a firmware reload that failed is worse than not trying.
  */
 static ssize_t soft_reset_store(struct device *dev,
 				struct device_attribute *attr,
@@ -1625,6 +1641,7 @@ static ssize_t soft_reset_store(struct device *dev,
 {
 	struct nanosic_wn8030 *nanosic = dev_get_drvdata(dev);
 	bool value;
+	int ret;
 
 	if (kstrtobool(buf, &value))
 		return -EINVAL;
@@ -1632,8 +1649,11 @@ static ssize_t soft_reset_store(struct device *dev,
 		return count;
 
 	mutex_lock(&nanosic->conn_mutex);
-	nanosic_wn8030_soft_reset(nanosic);
+	ret = nanosic_wn8030_soft_reset(nanosic);
 	mutex_unlock(&nanosic->conn_mutex);
+
+	if (ret)
+		return ret;
 
 	return count;
 }
