@@ -126,3 +126,4 @@
 0126-uke-protocol-observation.patch
 0127-qcom-battmgr-report-energy-in-mah.patch
 0128-qseecom-load-applets.patch
+0129-uke-ath11k-disable-imps.patch

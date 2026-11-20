@@ -1,0 +1,43 @@
+From: Uke platform maintainers
+Subject: [PATCH] wifi: ath11k: keep WCN6750 out of IMPS so idle links wake fast
+
+An SSH session to the tablet stalls for a moment on the first keystroke
+after the link has been idle, while a local console does not.  The link is
+otherwise healthy: 270 Mbit/s receive, -51 dBm, and a continuous ping keeps
+the stall away entirely.
+
+Two power-save mechanisms are involved and only one is reachable from
+userspace.  IEEE80211's STA power-save mode is what `iw dev wlan0 set
+power_save off` clears, through `arvif->ps` and `WMI_STA_PS_MODE_DISABLED`.
+IMPS is a separate pdev parameter: `ath11k_mac_op_start()` asks the firmware
+for `WMI_PDEV_PARAM_IDLE_PS_CONFIG` whenever `hw_params.idle_ps` is set, and
+nothing in debugfs or the module parameters can turn it off afterwards.
+
+With STA power-save already off the stall persisted, and a ping every 30
+seconds still kept it away, so the remaining suspect is IMPS itself: the
+whole wireless subsystem sleeps when idle and its exit is slow enough to be
+felt on the first packet.  Disabling it costs some idle power on a tablet
+that keeps Wi-Fi associated anyway.
+
+Only the wcn6750 hw_params entry changes; every other ath11k board keeps
+whatever its own table asks for.
+
+diff --git a/drivers/net/wireless/ath/ath11k/core.c b/drivers/net/wireless/ath/ath11k/core.c
+--- a/drivers/net/wireless/ath/ath11k/core.c
++++ b/drivers/net/wireless/ath/ath11k/core.c
+@@ -617,7 +617,14 @@
+ 					BIT(NL80211_IFTYPE_AP),
+ 		.supports_monitor = false,
+ 		.supports_shadow_regs = true,
+-		.idle_ps = true,
++		/*
++		 * IMPS lets the whole wireless subsystem sleep when idle.  On this
++		 * tablet its exit costs enough that an idle SSH session stalls for
++		 * a moment on the first keystroke, and `iw set power_save off`
++		 * cannot turn it off: the STA power-save mode and this pdev
++		 * parameter are separate.  Uke keeps IMPS disabled.
++		 */
++		.idle_ps = false,
+ 		.supports_sta_ps = true,
+ 		.coldboot_cal_mm = true,
+ 		.coldboot_cal_ftm = true,
