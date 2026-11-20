@@ -2176,7 +2176,6 @@ static int nanosic_wn8030_probe(struct i2c_client *client)
 err_input:
 	input_unregister_handler(&nanosic->hall_handler);
 	cancel_work_sync(&nanosic->input_state_work);
-err_soft_reset:
 	device_remove_file(nanosic->dev, &dev_attr_soft_reset);
 err_kbd_backlight_led:
 	if (backlight_cmd)
