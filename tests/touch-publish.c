@@ -34,6 +34,7 @@ struct nvt_uke_touch {
     struct input_mt_pos motion_center;
     u8 motion_slot;
     bool motion_valid;
+    unsigned int motion_frames;
 };
 static unsigned int warnings;
 static int decode_error, assign_error;
@@ -107,12 +108,16 @@ static void input_sync(struct input_dev *input) { input->syncs++; }
 #include "production-contacts.h"
 int main(void)
 {
+    /* Inside the dead zone the position holds; outside it re-locks to the finger. */
     assert(nvt_stable_axis(1200,1000,266,31999) == 1000);
     assert(nvt_stable_axis(800,1000,266,31999) == 1000);
-    assert(nvt_stable_axis(1500,1000,266,31999) == 1234);
-    assert(nvt_stable_axis(500,1000,266,31999) == 766);
+    assert(nvt_stable_axis(1500,1000,266,31999) == 1500);
+    assert(nvt_stable_axis(500,1000,266,31999) == 500);
     assert(nvt_stable_axis(0,1000,266,31999) == 0);
     assert(nvt_stable_axis(31999,31000,266,31999) == 31999);
+    /* Exactly one margin away is still inside. */
+    assert(nvt_stable_axis(1266,1000,266,31999) == 1000);
+    assert(nvt_stable_axis(1267,1000,266,31999) == 1267);
     const struct input_mt_pos original[3] = {{1000,2000},{4000,2000},{7000,2000}};
     for (unsigned int a = 0; a < 3; a++)
         for (unsigned int b = 0; b < 3; b++) {
@@ -232,7 +237,23 @@ int main(void)
     decoded.x[0]=1200;decoded.y[0]=2200;nvt_publish_contacts(&touch,0);
     assert(input.x[9] == 1000 && input.y[9] == 2000);
     decoded.x[0]=2000;decoded.y[0]=3000;nvt_publish_contacts(&touch,0);
-    assert(input.x[9] == 1734 && input.y[9] == 2734);
+    assert(input.x[9] == 2000 && input.y[9] == 3000); /* Outside 300: re-locks. */
+    /*
+     * Past NVT_UKE_JITTER_STABLE_FRAMES the lock tightens from 300 to 80 units.
+     * Hold here so the tracked centre stays at (2000,3000).
+     */
+    for (unsigned int held = 0; held < NVT_UKE_JITTER_STABLE_FRAMES; held++)
+        nvt_publish_contacts(&touch,0);
+    assert(touch.motion_frames == NVT_UKE_JITTER_STABLE_FRAMES);
+    decoded.x[0]=2000+60;decoded.y[0]=3000+60;nvt_publish_contacts(&touch,0);
+    assert(input.x[9] == 2000 && input.y[9] == 3000); /* <=80 stays centred. */
+    decoded.x[0]=2000+200;decoded.y[0]=3000+200;nvt_publish_contacts(&touch,0);
+    assert(input.x[9] == 2000+200 && input.y[9] == 3000+200); /* >80 re-locks too. */
+    nvt_release_contacts(&touch);
+    decoded.x[0]=1000;decoded.y[0]=2000;decoded.peak[0]=350;
+    /* A new contact is confirmed in two frames, so the counter restarts on the second. */
+    nvt_publish_contacts(&touch,0);assert(touch.motion_frames == 0);
+    nvt_publish_contacts(&touch,0);assert(touch.motion_frames == 1);
     decoded.active=3;decoded.x[0]=2100;decoded.y[0]=3100;decoded.peak[1]=350;
     nvt_publish_contacts(&touch,0);
     assert(input.x[9] == 2100 && input.y[9] == 3100); /* Multitouch bypasses stabilization. */

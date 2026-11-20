@@ -63,6 +63,7 @@ struct nvt_uke_touch {
 	struct input_mt_pos motion_center;
 	u8 motion_slot;
 	bool motion_valid;
+	unsigned int motion_frames;
 	u8 *tx, *rx, *frame;
 };
 
@@ -98,17 +99,40 @@ static void nvt_release_contacts(struct nvt_uke_touch *t)
 	t->contacts_active = 0;
 	t->candidate_valid = false;
 	t->motion_valid = false;
+	t->motion_frames = 0;
 }
 
 static int nvt_stable_axis(int value, int center, int margin, int maximum)
 {
+	int delta;
+
 	if (!value || value == maximum)
 		return value;
-	if (value > center + margin)
-		return value - margin;
-	if (value < center - margin)
-		return value + margin;
-	return center;
+	/* The lock distance is a dead-zone radius, not a per-frame step. */
+	delta = value - center;
+	if (delta < 0)
+		delta = -delta;
+	if (delta <= margin)
+		return center;
+	/*
+	 * Outside the dead zone the centre re-locks to the measured position.
+	 * Subtracting the margin instead would hold the pointer one margin behind
+	 * the finger for as long as it keeps moving, which is what made a slow
+	 * drag stair-step.
+	 */
+	return value;
+}
+
+/*
+ * How far a held single finger has to travel before its position moves.
+ * THP starts wide so a fresh press does not jump, then tightens once the
+ * contact has been held for NVT_UKE_JITTER_STABLE_FRAMES frames; doing only the
+ * wide lock forever is what made slow drags stair-step.
+ */
+static int nvt_jitter_margin(unsigned int held_frames)
+{
+	return held_frames >= NVT_UKE_JITTER_STABLE_FRAMES ?
+		NVT_UKE_JITTER_STABLE_LOCK : NVT_UKE_JITTER_FIRST_LOCK;
 }
 
 static void nvt_order_new_slots(const struct input_mt_pos *positions, int *slots,
@@ -219,10 +243,12 @@ static void nvt_publish_contacts(struct nvt_uke_touch *t, int frame_error)
 	/* Suppress single-finger contact-patch roll, without filtering fresh presses. */
 	if (count == 1 && t->motion_valid && t->motion_slot == slots[0] &&
 	    (previous & (1U << slots[0]))) {
+		int margin = nvt_jitter_margin(t->motion_frames);
+
 		positions[0].x = nvt_stable_axis(positions[0].x, t->motion_center.x,
-			t->prop.max_x / (2 * NVT_UKE_COLUMNS), t->prop.max_x);
+			margin, t->prop.max_x);
 		positions[0].y = nvt_stable_axis(positions[0].y, t->motion_center.y,
-			t->prop.max_y / (2 * NVT_UKE_ROWS), t->prop.max_y);
+			margin, t->prop.max_y);
 	}
 	t->contacts_active = 0;
 	for (i = 0; i < count; i++) {
@@ -239,6 +265,10 @@ static void nvt_publish_contacts(struct nvt_uke_touch *t, int frame_error)
 	if (t->motion_valid) {
 		t->motion_center = positions[0];
 		t->motion_slot = (u8)slots[0];
+		if (t->motion_frames < NVT_UKE_JITTER_STABLE_FRAMES)
+			t->motion_frames++;
+	} else {
+		t->motion_frames = 0;
 	}
 	input_mt_sync_frame(t->wake_input);
 	input_sync(t->wake_input);
