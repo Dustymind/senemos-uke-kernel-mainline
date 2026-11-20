@@ -520,6 +520,10 @@
     {
       "path": "patches/7.3.0/0128-qseecom-load-applets.patch",
       "sha256": "3d92b5dc3b8a362bb912c76e7fdf0a35293b9a3fc91c675f3699b46628dd7911"
+    },
+    {
+      "path": "patches/7.3.0/0129-uke-ath11k-disable-imps.patch",
+      "sha256": "51637d97b563afb2cdb83e7874c715f6e0b2b6820ce936cf2c0a6fee73940a78"
     }
   ],
   "dtb": "qcom/sm7675-xiaomi-uke.dtb",
