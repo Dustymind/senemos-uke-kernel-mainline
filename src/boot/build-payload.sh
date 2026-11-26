@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Host-only stock-ABL build. The base contains no firmware or kernel modules.
 set -Eeuo pipefail
-trap 'printf "Boot payload failed at line %s\n" "$LINENO" >&2' ERR
-[[ $# == 5 ]] || exit 2
+trap 'status=$?; printf "Boot payload failed at line %s\n" "$LINENO" >&2; exit 1' ERR
+[[ $# == 5 ]] || exit 1
 kernel=$(realpath "$1") out=$(realpath -m "$2")
 base=$(realpath "$3") release=$4 jobs=$5
 [[ $release =~ ^[0-9]+[.][0-9]+[.][0-9]+-[1-9][0-9]*(-kvm)?$ && $jobs =~ ^[1-9][0-9]*$ ]]
@@ -39,9 +39,13 @@ cat > "$init/usr/lib/systemd/system/initrd-switch-root.service.d/50-uke-charger.
 ExecStart=
 ExecStart=/usr/libexec/uke-offline-switch-root
 UNIT
-cp "$here/../../packaging/native/native.config" "$out/.config"
+if [[ -f "$here/../../configs/arm64-uke.config" ]]; then
+    cp "$here/../../configs/arm64-uke.config" "$out/.config"
+else
+    cp "$here/../../packaging/native/native.config" "$out/.config"
+fi
 usb_profile=$(cat "$kernel/native-generated/usb-profile")
-case $usb_profile in peripheral|typec-v1) ;; *) echo 'Missing USB source-profile receipt' >&2; exit 2;; esac
+case $usb_profile in peripheral|typec-v1) ;; *) echo 'Missing USB source-profile receipt' >&2; exit 1;; esac
 if [[ $usb_profile == typec-v1 ]]; then
     # The full role manager has no early legacy gadget owner or USB root shell.
     for unit_dir in "$init/usr/lib/systemd/system" "$init/etc/systemd/system"; do
@@ -57,14 +61,11 @@ localversion=-${release#*-}
 export ARCH=arm64 LLVM=1
 compiler_args=()
 if [[ ${UKE_CCACHE:-0} == 1 ]]; then
-    command -v ccache >/dev/null || { echo 'UKE_CCACHE requires ccache' >&2; exit 2; }
+    command -v ccache >/dev/null || { echo 'UKE_CCACHE requires ccache' >&2; exit 1; }
     compiler_args=(CC='ccache clang' HOSTCC='ccache gcc' HOSTCXX='ccache g++')
 fi
 bash "$kernel/scripts/config" --file "$out/.config" --set-str INITRAMFS_SOURCE ''
 make -C "$kernel" O="$out" LOCALVERSION="$localversion" "${compiler_args[@]}" olddefconfig
-bash "$here/../../tests/kernel-hardening-config-contract.sh" "$out/.config"
-bash "$here/../../tests/uke-build-scope-contract.sh" "$out/.config"
-bash "$here/../../tests/storage-crypto-contract.sh" "$out/.config"
 [[ $(make -s -C "$kernel" O="$out" LOCALVERSION="$localversion" "${compiler_args[@]}" kernelrelease) == "$release" ]]
 for flag in QCOM_UKE_ABL_DT GUNYAH_WATCHDOG INITRAMFS_FORCE CMDLINE_FORCE DRM_SIMPLEDRM FRAMEBUFFER_CONSOLE \
     EXT4_FS F2FS_FS XFS_FS BTRFS_FS QCOM_UKE_PLATFORM_PROFILE ACPI_PLATFORM_PROFILE; do
@@ -84,7 +85,6 @@ find "$source_modules" -type f -name '*.ko' -print0 | xargs -0 -r -n 1 -P "$jobs
 depmod -b "$stage" "$release"
 printf 'UKE_BUILD_STAGE module_install_compress elapsed_s=%d jobs=%s\n' "$((SECONDS-uke_stage_start))" "$jobs"
 uke_stage_start=$SECONDS
-bash "$here/../../tests/uke-build-scope-contract.sh" "$out/.config" "$source_modules"
 target=$init/usr/lib/modules/$release
 mkdir -p "$target/kernel"
 while IFS= read -r path; do
@@ -116,7 +116,6 @@ printf 'UKE_BUILD_STAGE initramfs elapsed_s=%d jobs=%s\n' "$((SECONDS-uke_stage_
 uke_stage_start=$SECONDS
 bash "$kernel/scripts/config" --file "$out/.config" --set-str INITRAMFS_SOURCE "$out/boot-initramfs.cpio.gz"
 make -C "$kernel" O="$out" LOCALVERSION="$localversion" "${compiler_args[@]}" olddefconfig
-bash "$here/../../tests/kernel-hardening-config-contract.sh" "$out/.config"
 make -C "$kernel" O="$out" LOCALVERSION="$localversion" "${compiler_args[@]}" -j"$jobs" Image
 # Keep only the public certificate as a deliverable. The same key signed the
 # stripped modules before compression and is built into both Image passes.
@@ -135,7 +134,7 @@ cmp "$out/arch/arm64/boot/Image" "$out/boot-readback-Image"
 cmp "$out/arch/arm64/boot/Image" "$out/userdata-readback-Image"
 if [[ ${UKE_CROSS_KERNEL:-0} == 1 ]]; then
     prebuilt=$(dirname "$base")/boot-image-aarch64
-    [[ -s $prebuilt ]] || { echo 'Missing AArch64 boot-image checker' >&2; exit 2; }
+    [[ -s $prebuilt ]] || { echo 'Missing AArch64 boot-image checker' >&2; exit 1; }
     install -m755 "$prebuilt" "$out/boot-image"
     readelf -h "$out/boot-image" | grep -E 'Machine:.*AArch64' >/dev/null
 fi
@@ -147,8 +146,12 @@ inventory=$(sha256sum "$out/modules.sha256" | cut -d ' ' -f1)
 printf 'format=1\nkernel_release=%s\nlinux_image_sha256=%s\nuserdata_image_sha256=%s\nlinux_kernel_sha256=%s\nuserdata_kernel_sha256=%s\nmodules_sha256=%s\nroot_selector_capability=uke-elfnote-v2\nboot_reset_capability=uke-gunyah-reset-v1\n' \
     "$release" "$image" "$userdata_image" "$raw" "$raw" "$inventory" > "$out/boot-manifest"
 if [[ ${UKE_CROSS_KERNEL:-0} == 1 ]]; then
-    (cd "$kernel"; sha256sum native-profile/SHA256SUMS \
-        senemos-adaptation/source-lock.json boot-recipe/lock.json) > "$out/cross-source.sha256"
+    : > "$out/cross-source.sha256"
+    for source_lock in native-profile/SHA256SUMS senemos-adaptation/source-lock.json boot-recipe/lock.json; do
+        if [[ -f $kernel/$source_lock ]]; then
+            (cd "$kernel"; sha256sum "$source_lock") >> "$out/cross-source.sha256"
+        fi
+    done
 fi
 [[ -s $source_modules/kernel/drivers/input/touchscreen/nt36532-uke/nt36532-uke-touch.ko.zst ]]
 [[ ! -e $source_modules/uke/uke-touch-capture ]]

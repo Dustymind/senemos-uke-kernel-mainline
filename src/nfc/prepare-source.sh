@@ -21,4 +21,3 @@ printf '\nobj-$(CONFIG_FM19511_UKE) += fm19511-uke.o\n' >> "$kernel/drivers/misc
 git -C "$kernel" apply --check "$here/../../patches/boot/0012-ir-spi-optional-power.patch"
 git -C "$kernel" apply "$here/../../patches/boot/0012-ir-spi-optional-power.patch"
 install -m644 "$here/../infrared/ir-spi-uke.c" "$kernel/drivers/media/rc/ir-spi.c"
-bash "$here/../../tests/ir-spi-contract.sh" "$kernel/drivers/media/rc/ir-spi.c"

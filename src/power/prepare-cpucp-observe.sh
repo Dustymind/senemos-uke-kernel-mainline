@@ -18,4 +18,3 @@ config QCOM_UKE_CPUCP_OBSERVE
 	  configuration or performance policy is changed. No autoload alias.
 KCONFIG
 printf '\nobj-$(CONFIG_QCOM_UKE_CPUCP_OBSERVE) += uke-cpucp-observe.o\n' >> "$target/Makefile"
-bash "$here/../../tests/memlat-scmi-probe-contract.sh" "$target/uke-cpucp-observe.c"

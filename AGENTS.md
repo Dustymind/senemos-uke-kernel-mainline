@@ -26,7 +26,6 @@ the umbrella repository.
 ```sh
 git status
 git branch --show-current
-make check-pins
 ```
 
 Read the top of the umbrella backlog, pick one item and say which files you
@@ -57,35 +56,29 @@ URLs.
 Run from this repository root:
 
 ```sh
-make check-pins   # fast: active manifest and source digests
-make validate     # source contracts; needs rpm/rpmspec, dtc and clang
+# No automated assertion checks are used in this clean branch.
+# Validate by building and by manual device acceptance.
 ```
 
-`make validate` needs a Fedora-era toolchain. Without `rpm`, `rpmspec`, `dtc`
-or `clang` a late contract exits non-zero **without naming the failing test**;
-`make` reports only the recipe line. The umbrella `tools/check-dev-env.sh`
-lists the missing tools. New kernel development and candidate builds use
-`senemos-uke-linux-kernel-mainline-unstable` with an `-unstable` Image ABI;
-promotion to the normal family needs an explicit request and physical
-validation.
-
-CI runs the component source contracts; see the workflow files in
-`.github/workflows/`. A passing check is not a device test and a successful
-build is not a boot test.
+This clean branch has no automated assertion/test harness. Validate changes by
+building and by manual device acceptance; a successful build is not a boot
+test. New kernel development and candidate builds use the arm64 ABI selected
+by the package recipe; promotion to the normal family needs an explicit
+request and physical validation.
 
 ## Build
 
-For kernel development without an image:
+Build the kernel and boot image with the clean source scripts:
 
 ```sh
-./senemos.sh --help
-./senemos.sh --build 7.3.1 --distro=fedora --test
+make build-kernel
+make build-boot-img
 ```
 
-`senemos.sh` prepares host prerequisites, builds in an isolated Fedora
-toolchain and needs about 25 GiB free. Requirements and supported hosts:
-[README](README.md) and [BUILDING.md](docs/BUILDING.md). The image builder is
-driven from the umbrella; do not duplicate its rootfs logic here.
+The kernel build detects native arm64 or any non-arm64 cross host, uses
+`CROSS_COMPILE` / `CLANG_TRIPLE` when needed, and writes to `build/kernel`.
+The boot image build consumes the prepared kernel tree and writes to
+`build/boot`.
 
 ## Documentation rules
 

@@ -534,8 +534,8 @@
       "sha256": "f445d7235c89eee77218656abaca7cc0e7dddc688b4a242e1b788982fd3b4c7a"
     },
     {
-      "path": "configs/fedora.config",
-      "sha256": "5d882a1a0008b9548a623757aefb7af3e195c48ab21611d887388a8fff1a8f99"
+      "path": "configs/arm64-uke.config",
+      "sha256": "52f175a909d4d9a8cddffe013c37173419dbb87f258d764062ea45c5c680e460"
     }
   ],
   "patch_series": "7.3.0"

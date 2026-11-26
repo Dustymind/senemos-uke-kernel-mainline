@@ -21,7 +21,7 @@
     },
     {
       "path": "packaging/native/README.md",
-      "sha256": "29d8fc862f3fbc10c0e3a8886409c5bd3be6af938a083421fbdd46f162ff80e3"
+      "sha256": "a4542ee6c974e88ccb7d97fc3fe615f6243d81856465ddd3e391622b90ed5d19"
     },
     {
       "path": "packaging/native/audio-profile",
@@ -409,7 +409,7 @@
     },
     {
       "path": "src/boot/build-payload.sh",
-      "sha256": "74d881576dff36897ffb3fee5e2e478b445491f2ae57e0c8711be2867641a736"
+      "sha256": "8a215675356f21b6ec6c4938616bd03f541eac9466574f178200c9913abcb67a"
     },
     {
       "path": "src/boot/check-root-capability.sh",
@@ -489,7 +489,7 @@
     },
     {
       "path": "src/boot/prepare-abl-source.sh",
-      "sha256": "c9052898a129051aa15f20188b4ea8d75346e2fb9d61ee53e091498a481c72b2"
+      "sha256": "0e77d7c602ef366570668780fabd4eb03be2bd80e00ee687099b2e8312f879c3"
     },
     {
       "path": "src/boot/uke-abl.c",
@@ -613,7 +613,7 @@
     },
     {
       "path": "src/power/prepare-cpucp-observe.sh",
-      "sha256": "deb2d631f5481574d43288a421ac6a6eb82cf08ffae1426872039b7c194ff42d"
+      "sha256": "349779f1318f57f115158923b489ad102fc357104c4101a52190e2e13bcf7e90"
     },
     {
       "path": "src/power/uke-cpucp-observe.c",
@@ -1157,7 +1157,7 @@
     },
     {
       "path": "src/nfc/prepare-source.sh",
-      "sha256": "53182ac5d741ad8bcb7734466a1ff55ea9ca3aba4a0e1bd9f8ba6482de15b46e"
+      "sha256": "df1088706fdf120896bb45772d4444bd78b706252979e894ad6c5a2c9f9968a1"
     },
     {
       "path": "src/nfc/fm19511-uke.c",

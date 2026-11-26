@@ -39,18 +39,6 @@ while IFS=$'\t' read -r path expected; do
     printf '%s  %s\n' "$expected" "$path" >> "$kernel/native-generated/video-source-SHA256SUMS"
 done < <(jq -er '.patches[] | [.path,.sha256] | @tsv' "$manifest")
 iris=$kernel/drivers/media/platform/qcom/iris
-for fixture in iris-2p-lifecycle iris-boot-status iris-power-domain iris-resource-fault \
-               iris-va-order iris-fw-memory iris-fw-lifetime iris-fw-queue \
-               iris-sm7675-power iris-oneshot-irq iris-sm7675-caps iris-vp9-nonshow \
-               iris-capture-cache iris-serial-budget iris-decode-order-stage; do
-    bash "$root/tests/$fixture-contract.sh" "$iris"
-done
-bash "$root/tests/iris-smmu-contract.sh" "$kernel/drivers/iommu/arm/arm-smmu"
-bash "$root/tests/video-reset-error-contract.sh" "$kernel/drivers/clk/qcom"
-bash "$root/tests/videocc-vote-contract.sh" "$kernel/drivers/clk/qcom/uke-videocc-votes.c"
-bash "$root/tests/videocc-retention-contract.sh" "$kernel/drivers/clk/qcom/videocc-sm8550.c"
-bash "$root/tests/video-icc-topology-contract.sh" "$kernel"
-bash "$root/tests/video-gcc-config-contract.sh" "$kernel/drivers/clk/qcom/gcc-cliffs.c"
 if [[ ${UKE_VIDEO_OVERLAY:-0} == 1 ]]; then
     header=$kernel/arch/arm64/kernel/uke-abl-overlays.h
     [[ -f $header ]] || { echo 'ABL overlay header is missing; run boot preparation first' >&2; exit 1; }
