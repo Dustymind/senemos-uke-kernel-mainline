@@ -1,4 +1,6 @@
-# Senemos Uke Kernel — clean source branch
+# Senemos Uke Kernel
+
+> modified to provide a simplified build method
 
 Linux 7.3.1 arm64 source branch for Xiaomi Pad 7 / POCO Pad X1 (`uke`, SM7675).
 
