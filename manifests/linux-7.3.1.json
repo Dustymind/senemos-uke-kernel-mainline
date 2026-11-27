@@ -535,7 +535,7 @@
     },
     {
       "path": "configs/arm64-uke.config",
-      "sha256": "52f175a909d4d9a8cddffe013c37173419dbb87f258d764062ea45c5c680e460"
+      "sha256": "97e258db6ef12cbd6ad38fa1ee2a36de349e8015a5f67a75f6e2ff85f61dd38c"
     }
   ],
   "patch_series": "7.3.0"
