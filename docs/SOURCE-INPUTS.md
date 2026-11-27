@@ -39,6 +39,9 @@ Files used from the branch:
 ```text
 patches/7.3.0/      128-patch Uke series
 src/                Uke native source and DTS/DTSO overlays
+src/hid/firmware/nanosic/MCU_Upgrade.bin
+                    Nanosic MCU firmware, staged as firmware/nanosic/MCU_Upgrade.bin
+                    for CONFIG_EXTRA_FIRMWARE
 configs/arm64-uke.config
 manifests/linux-7.3.1.json
 packaging/native/   USB/LLCC/audio profile selectors

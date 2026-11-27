@@ -9,6 +9,12 @@ kernel=$(realpath "${1:?Pass the prepared Linux source tree}")
 output="$kernel/native-generated"
 mkdir -p "$output"
 
+# CONFIG_EXTRA_FIRMWARE_DIR="firmware" is relative to the kernel source root.
+# Stage the Nanosic MCU blob there for both direct source builds and release
+# archive preparation.
+install -Dm644 "$repo/src/hid/firmware/nanosic/MCU_Upgrade.bin" \
+    "$kernel/firmware/nanosic/MCU_Upgrade.bin"
+
 # Source-lock metadata consumed by the boot/display preparation helpers.
 install -d "$kernel/senemos-adaptation"
 jq '{version, patch_series, patches: [.patches[] | {path, sha256}]}' \
